@@ -1,11 +1,10 @@
 package main
 
 import (
-    "fmt"
 	"log"
     "oracle.com/soothsayers"
     "net/http"
-    "io/ioutil"
+    "io"
     "encoding/json"
 )
 
@@ -17,27 +16,40 @@ func main() {
 
 func AttendAudience(w http.ResponseWriter, req *http.Request) {
     log.SetPrefix("audiences: ")
-    log.SetFlags(0)
 
     // Get body of request
-    body, err := ioutil.ReadAll(req.Body)
-    req.Body.Close()
-    var fr soothsayers.FeasibilityRequest
-    err = json.Unmarshal(body, &fr)
+
+    body, err := io.ReadAll(req.Body)
     if err != nil {
-        log.Fatal(err)
+        log.Print(err)
+    }
+    req.Body.Close()
+    var s string
+    log.Print(string(body[:]))
+    err = json.Unmarshal(body, &s)
+    if err != nil {
+        log.Print(err)
+    }
+    
+    var fr soothsayers.FeasibilityRequest
+    err = json.Unmarshal([]byte(s), &fr)
+    if err != nil {
+        log.Print(err)
     }
     
     // Attend to request
     feasibilityData, err := soothsayers.Attend(fr)
     if err != nil {
-        log.Fatal(err)
+        log.Print(err)
     }
+    log.Print(fr)
 
     // If no error was returned, print the returned feasibilityData
     // to the console.
-    fmt.Println(feasibilityData)
+    log.Print(feasibilityData)
 }
+
+
 
     
 
