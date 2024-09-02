@@ -12,7 +12,7 @@ func TestAttendWithData(t *testing.T) {
     }
 }
 
-func TestAttendNoData(t *testing.T) {
+func TestAttendNoData(t *testing.T) { 
     feasilbilityResultData, err := Attend(-1)
     if feasilbilityResultData != -1 || err == nil {
         t.Fatalf(`Attend(-1) = %v, %v, want-1, error`, feasilbilityResultData, err)
