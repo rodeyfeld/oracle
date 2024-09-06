@@ -39,7 +39,7 @@ func bodyToString(req *http.Request) string {
 }
 
 func AttendAudienceFuture(w http.ResponseWriter, req *http.Request) {
-	log.SetPrefix("audiences: ")
+	log.SetPrefix("audience: ")
 	s := bodyToString(req)
 	var freq soothsayer.FeasibilityRequest
 	// Convert json string body to internal struct
@@ -52,7 +52,7 @@ func AttendAudienceFuture(w http.ResponseWriter, req *http.Request) {
 	fres, err := soothsayer.Predict(freq)
 
 	// log is global, reset prefix after soothsayers is complete
-	log.SetPrefix("audiences: ")
+	log.SetPrefix("audience: ")
 	if err != nil {
 		log.Print(err)
 	}
@@ -68,17 +68,17 @@ func AttendAudienceFuture(w http.ResponseWriter, req *http.Request) {
 }
 
 func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
-	log.SetPrefix("audiences: ")
+	log.SetPrefix("audience: ")
 	s := bodyToString(req)
 	var areq scholar.ArchiveRequest
 	// Convert json string body to internal struct
 	err := json.Unmarshal([]byte(s), &areq)
 	if err != nil {
-		log.Panic(fmt.Sprintf("Faield unmarshaling audience request! Unable to process archive request"))
+		log.Panic(fmt.Sprintf("Failed unmarshaling audience request! Unable to process archive request"))
 	}
 
 	// Attend to request, get archive results
-	ares, err := scholar.Study(areq)
+	ares := scholar.Study(areq)
 
 	// log is global, reset prefix after scholars is complete
 	log.SetPrefix("audiences: ")
@@ -88,7 +88,7 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 
 	// If no error was returned, print the returned ConfidenceScore
 	// to the console.
-	log.Print(fmt.Sprintf("[%v|%s] Ran archivesearch! Result count: %v", ares.ArchiveFinderId, ares.Id, ares.ConfidenceScore))
+	log.Print(fmt.Sprintf("[%v|%s] Ran archivesearch! Result count: %v", ares.ArchiveFinderId, ares.Id, len(ares.Result.Features)))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

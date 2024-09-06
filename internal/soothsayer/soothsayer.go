@@ -29,12 +29,9 @@ type FeasibilityResult struct {
 const resultScoreMultiplier float32 = 100
 
 func Predict(freq FeasibilityRequest) (FeasibilityResult, error) {
-	log.SetPrefix("soothsayers: ")
+	log.SetPrefix("soothsayer: ")
 	// Create a random ID for this request
-	id, err := chaos.UUID()
-	if err != nil {
-		log.Print(fmt.Sprintf("[%v|-1]: Failed randomUUID! : %s", freq.FeasibilityFinderId, err))
-	}
+	id := chaos.UUID()
 	log.Print(fmt.Sprintf("[%v|%s]: Predicting for request", freq.FeasibilityFinderId, id))
 
 	endDate, err := chaos.FutureTime(freq.EndDate)
