@@ -4,4 +4,4 @@ services:
       context: .
       target: builder
     ports: 
-      - '7777:7777'
+      - '7777:8080'
