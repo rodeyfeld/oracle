@@ -14,6 +14,7 @@ import (
 
 func main() {
 	http.HandleFunc("/attendPast", AttendAudiencePast)
+	http.HandleFunc("/attendPastCold", AttendPastCold)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
 	log.Print("Running server")
@@ -37,6 +38,12 @@ func bodyToString(req *http.Request) string {
 		log.Print(err)
 	}
 	return s
+}
+
+func AttendPastCold(w http.ResponseWriter, req *http.Request) {
+	ares := scholar.Scribe()
+	log.Print(fmt.Sprintf("SCRIBE: %s", ares))
+
 }
 
 func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"oracle.com/chaos"
+	"oracle.com/copernicus"
 )
 
 type ArchiveRequest struct {
@@ -17,20 +18,28 @@ type ArchiveRequest struct {
 }
 
 type ArchiveResult struct {
-	Result          copernicusResult `json:"result"`
-	Id              string           `json:"id"`
-	ArchiveFinderId int              `json:"archive_finder_id"`
+	Result          copernicus.CopernicusResult `json:"result"`
+	Id              string                      `json:"id"`
+	ArchiveFinderId int                         `json:"archive_finder_id"`
 }
 
 func Study(areq ArchiveRequest) ArchiveResult {
-	log.SetPrefix("scholar: ")
+	log.SetPrefix("scholar: [study] ")
 	// Create a random ID for this request
 	id := chaos.UUID()
 	log.Print(fmt.Sprintf("[%v|%s]: Studying for request", areq.ArchiveFinderId, id))
 	ares := ArchiveResult{
-		Result:          randCopernicusResult(),
+		Result:          copernicus.RandCopernicusResult(),
 		Id:              id,
 		ArchiveFinderId: areq.ArchiveFinderId,
 	}
 	return ares
+}
+
+func Scribe() string {
+	log.SetPrefix("scholar: [scribe] ")
+	// Create a random ID for this request
+	id := chaos.UUID()
+	copernicus.Teach()
+	return id
 }
