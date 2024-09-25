@@ -19,6 +19,6 @@ type Rules struct {
 }
 
 type Geometry struct {
-	Type        string  `json:"type"`
-	Coordinates [][]int `json:"coordinates"`
+	Type        string        `json:"type"`
+	Coordinates [][][]float32 `json:"coordinates"`
 }

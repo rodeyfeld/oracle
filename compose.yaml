@@ -11,11 +11,11 @@ services:
   mongo:
     image: mongo
     restart: always
-    ports: 
-      - '27017:27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_ROOT_PASSWORD: example    
+    networks: # Networks to join (Services on the same network can communicate with each other using their name)
+      - backend
 
   mongo-express:
     image: mongo-express
@@ -27,5 +27,10 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
       ME_CONFIG_BASICAUTH: false
+
+    networks: # Networks to join (Services on the same network can communicate with each other using their name)
+      - backend
+
 networks:
   backend:   
+    driver: bridge

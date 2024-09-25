@@ -62,31 +62,31 @@ func ConfidenceScore() float32 {
 	return rand.Float32()
 }
 
-func Coord() []int {
-	const max_latitude int = 90
-	const max_longitude int = 180
-	longitude := rand.Intn(max_longitude) * (-1 * rand.Intn(2))
-	latitude := rand.Intn(max_latitude) * (-1 * rand.Intn(2))
-	return []int{longitude, latitude}
+func Coord() []float32 {
+	const max_latitude float32 = 90.0
+	const max_longitude float32 = 180.0
+	longitude := rand.Float32()
+	latitude := rand.Float32()
+	return []float32{longitude, latitude}
 }
 
-func Polygon() [][]int {
-	rand_coord := Coord()
-	coord_1 := []int{rand_coord[0] + 1, rand_coord[1]}
-	coord_2 := []int{rand_coord[0] - 1, rand_coord[1]}
-	coord_3 := []int{rand_coord[0], rand_coord[1] + 1}
-	coord_4 := []int{rand_coord[0], rand_coord[1] - 1}
-	return [][]int{
-		coord_1,
-		coord_2,
-		coord_3,
-		coord_4,
-	}
-}
+// func Polygon() [][][]float32 {
+// 	return [
+//       [
+//         [36.346397, 51.0242],
+//         [36.924194, 52.757286],
+//         [33.115135, 53.165371],
+//         [32.68145, 51.429417],
+//         [36.346397, 51.0242]
+//       ]
+//     ]
 
-func GeometryPolygon() order.Geometry {
-	return order.Geometry{
-		Coordinates: Polygon(),
-		Type:        "Polygon",
-	}
-}
+// 	return [][][]float32{}
+// }
+
+// func GeometryPolygon() order.Geometry {
+// 	return order.Geometry{
+// 		Coordinates: Polygon(),
+// 		Type:        "Polygon",
+// 	}
+// }

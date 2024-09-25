@@ -2,6 +2,7 @@ package copernicus
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"oracle.com/chaos"
 	"oracle.com/order"
@@ -89,8 +93,8 @@ func RandCopernicusResult() CopernicusResult {
 
 func randCopernicusFeature() copernicusFeature {
 	return copernicusFeature{
-		Id:         chaos.UUID(),
-		Geometry:   chaos.GeometryPolygon(),
+		Id: chaos.UUID(),
+		// Geometry:   chaos.GeometryPolygon(),
 		Assets:     randFeatureAssets(),
 		Properties: randFeatureProperties(),
 		Collection: "SENTINEL-1",
@@ -145,6 +149,42 @@ func getToken() string {
 	return ""
 }
 
+func handleDBInsert(feat copernicusFeature) {
+
+	const uri = "mongodb://root:example@mongo:27017/"
+	// ServerAPIOptions must be declared with an API version. ServerAPIVersion1
+	// is a constant equal to "1".
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
+	serverAPIClient, err := mongo.Connect(
+		options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
+	if err != nil {
+		panic(err)
+	}
+	_ = serverAPIClient
+	log.Print("Inserting faet")
+	res, err := serverAPIClient.Database("catalog").Collection("sentinel_one").InsertOne(context.Background(), feat)
+	if err != nil {
+		panic(err)
+	}
+	log.Print(res)
+}
+
+func getNextLink(copRes CopernicusResult) string {
+	for _, link := range copRes.Links {
+		if link.Type == "next" {
+			return link.Href
+		}
+	}
+	return ""
+
+}
+
+func insertFeatures(feats []copernicusFeature) {
+	for _, feat := range feats {
+		handleDBInsert(feat)
+	}
+}
+
 func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.Time) {
 
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
@@ -173,10 +213,10 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 	defer resp.Body.Close()
 
 	var copRes CopernicusResult
-
 	json.NewDecoder(resp.Body).Decode(&copRes)
 
-	log.Print(fmt.Sprintf("%s", copRes.Type))
+	insertFeatures(copRes.Features)
+
 	if resp.StatusCode == http.StatusOK {
 		fmt.Println("Request successful!")
 	} else {
@@ -186,9 +226,12 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 
 func scanCollection(collection string) {
 
-	nowTime := time.Now()
+	nowTime := time.Now().AddDate(-1, 0, 0)
 	lastMonthTime := nowTime.AddDate(0, -1, 0)
-	searchCollectionByDatetimeRange(collection, nowTime, lastMonthTime)
+	go searchCollectionByDatetimeRange(collection, lastMonthTime, nowTime)
+	nowTime = nowTime.AddDate(-1, 0, 0)
+	lastMonthTime = nowTime.AddDate(0, -1, 0)
+	go searchCollectionByDatetimeRange(collection, lastMonthTime, nowTime)
 
 }
 
