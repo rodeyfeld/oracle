@@ -1,5 +1,5 @@
 # ORACLE
-Feasibility and Archive Search Data.
+Feasibility and Archive Search Data. Written in Go.
 
 To launch:
 ```
