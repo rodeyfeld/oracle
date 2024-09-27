@@ -29,7 +29,6 @@ type LiveCopernicusRequest struct {
 	Limit           int            `json:"limit"`
 	Metadata        order.Metadata `json:"metadata"`
 }
-
 type CopernicusRequest struct {
 	Collections string `json:"collections"`
 	Datetime    string `json:"datetime"`
@@ -161,10 +160,10 @@ func handleDBInsert(feat copernicusFeature) {
 		panic(err)
 	}
 	_ = serverAPIClient
-	log.Print("Inserting faet")
+	log.Print("Inserting feat")
 	res, err := serverAPIClient.Database("catalog").Collection("sentinel_one").InsertOne(context.Background(), feat)
 	if err != nil {
-		panic(err)
+		log.Print(err)
 	}
 	log.Print(res)
 }
@@ -185,9 +184,7 @@ func insertFeatures(feats []copernicusFeature) {
 	}
 }
 
-func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.Time) {
-
-	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
+func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.Time, link string) {
 
 	dtRange := fmt.Sprintf("%s/%s", dt1.Format(time.RFC3339), dt2.Format(time.RFC3339))
 
@@ -203,7 +200,7 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 	params.Set("datetime", reqData.Datetime)
 	params.Set("sortby", reqData.Sortby)
 	params.Set("limit", reqData.Limit)
-	url := fmt.Sprintf("%s?%s", search_url, params.Encode())
+	url := fmt.Sprintf("%s?%s", link, params.Encode())
 	log.Print(url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -216,26 +213,25 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 	json.NewDecoder(resp.Body).Decode(&copRes)
 
 	insertFeatures(copRes.Features)
-
-	if resp.StatusCode == http.StatusOK {
-		fmt.Println("Request successful!")
-	} else {
-		fmt.Printf("Request failed with status: %s\n", resp.Status)
+	link = getNextLink(copRes)
+	if link != "" {
+		searchCollectionByDatetimeRange(collection, dt1, dt2, link)
 	}
 }
 
 func scanCollection(collection string) {
+	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
+	initialTime := time.Date(2013, 1, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Now().UTC()
+	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
+		lastMonthTime := d.AddDate(0, -1, 0)
+		go searchCollectionByDatetimeRange(collection, lastMonthTime, d, search_url)
 
-	nowTime := time.Now().AddDate(-1, 0, 0)
-	lastMonthTime := nowTime.AddDate(0, -1, 0)
-	go searchCollectionByDatetimeRange(collection, lastMonthTime, nowTime)
-	nowTime = nowTime.AddDate(-1, 0, 0)
-	lastMonthTime = nowTime.AddDate(0, -1, 0)
-	go searchCollectionByDatetimeRange(collection, lastMonthTime, nowTime)
-
+	}
 }
 
 func Teach() {
 	// token := getToken()
 	scanCollection("SENTINEL-1")
+
 }

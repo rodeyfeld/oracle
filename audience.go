@@ -18,7 +18,8 @@ func main() {
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
 	log.Print("Running server")
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":7777", nil)
+	log.Panic(err)
 }
 
 func bodyToString(req *http.Request) string {
