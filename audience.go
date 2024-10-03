@@ -7,18 +7,27 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
+
 	"oracle.com/bazaar"
 	"oracle.com/scholar"
 	"oracle.com/soothsayer"
 )
 
+const LOCAL_MODE = true
+
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPastCold", AttendPastCold)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
 	log.Print("Running server")
-	err := http.ListenAndServe(":8080", nil)
+
+	err = http.ListenAndServe(":8080", nil)
 	log.Panic(err)
 }
 
