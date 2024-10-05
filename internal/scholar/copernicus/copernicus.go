@@ -72,18 +72,18 @@ const maxFeaturesInResult = 50
 
 func RandCopernicusResult() CopernicusResult {
 	var cfs []copernicusFeature
-	for _ = range rand.Intn(maxFeaturesInResult) {
-		cfs = append(cfs, randCopernicusFeature())
+	for range rand.Intn(maxFeaturesInResult) {
+		cfs = append(cfs, RandCopernicusFeature())
 	}
 	return CopernicusResult{
 		Features: cfs,
 	}
 }
 
-func randCopernicusFeature() copernicusFeature {
+func RandCopernicusFeature() copernicusFeature {
 	return copernicusFeature{
-		Id: chaos.UUID(),
-		// Geometry:   chaos.GeometryPolygon(),
+		Id:         chaos.UUID(),
+		Geometry:   chaos.GeometryPolygon(),
 		Assets:     randFeatureAssets(),
 		Properties: randFeatureProperties(),
 		Collection: "SENTINEL-1",

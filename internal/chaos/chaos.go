@@ -58,35 +58,62 @@ func Metadata() order.Metadata {
 	return metadata
 }
 
+func CatalogName() string {
+	rand.Int()
+	catalog_names := []string{
+		"Pluto",
+		"Eris",
+		"Haumea",
+		"Makemake",
+		"Gonggong",
+		"Quaoar",
+		"Ceres",
+		"Orcus",
+		"Sedna",
+	}
+	cn := catalog_names[rand.Intn(len(catalog_names))]
+	uuid := UUID()
+	return fmt.Sprintf("[%s-%s-]", cn, uuid[0:4])
+}
+
+func CollectionName() string {
+	rand.Int()
+	catalog_names := []string{
+		"Perseus",
+		"Cassiopeia",
+		"Lacerta",
+		"Pegasus",
+		"Pisces",
+		"Triangulum",
+	}
+	cn := catalog_names[rand.Intn(len(catalog_names))]
+	uuid := UUID()
+	return fmt.Sprintf("[%s-%s-]", cn, uuid[0:4])
+}
+
 func ConfidenceScore() float32 {
 	return rand.Float32()
 }
 
-func Coord() []float32 {
-	const max_latitude float32 = 90.0
-	const max_longitude float32 = 180.0
-	longitude := rand.Float32()
-	latitude := rand.Float32()
-	return []float32{longitude, latitude}
+func Coord(x float32, y float32) []float32 {
+	return []float32{x, y}
 }
 
-// func Polygon() [][][]float32 {
-// 	return [
-//       [
-//         [36.346397, 51.0242],
-//         [36.924194, 52.757286],
-//         [33.115135, 53.165371],
-//         [32.68145, 51.429417],
-//         [36.346397, 51.0242]
-//       ]
-//     ]
+func Polygon() [][][]float32 {
+	pcs := make([][]float32, 1)
+	pcs = append(pcs, Coord(0, 0))
+	pcs = append(pcs, Coord(0, 1))
+	pcs = append(pcs, Coord(1, 0))
+	pcs = append(pcs, Coord(1, 1))
 
-// 	return [][][]float32{}
-// }
+	polygon := make([][][]float32, 1)
+	polygon = append(polygon, pcs)
+	return polygon
+}
 
-// func GeometryPolygon() order.Geometry {
-// 	return order.Geometry{
-// 		Coordinates: Polygon(),
-// 		Type:        "Polygon",
-// 	}
-// }
+func GeometryPolygon() order.Geometry {
+	return order.Geometry{
+		Coordinates: Polygon(),
+		Type:        "Polygon",
+	}
+}

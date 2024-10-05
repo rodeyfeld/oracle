@@ -79,7 +79,6 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 		ares = scholar.Study(areq)
 	} else {
 		ares = scholar.Recite(areq)
-
 	}
 	if err != nil {
 		log.Print(err)
