@@ -10,26 +10,22 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"oracle.com/chaos"
 	"oracle.com/order"
 )
 
-type LiveCopernicusRequest struct {
-	Id              string         `json:"id"`
-	ArchiveFinderId int            `json:"archive_finder_id"`
-	Collections     string         `json:"collections"`
-	Datetime        time.Time      `json:"datetime"`
-	Sortby          string         `json:"sortby"`
-	Limit           int            `json:"limit"`
-	Metadata        order.Metadata `json:"metadata"`
+type copernicusAuth struct {
+	GrantType string `json:"grant_type"`
+	ClientId  string `json:"client_id"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
 }
+
 type CopernicusRequest struct {
 	Collections string `json:"collections"`
 	Datetime    string `json:"datetime"`
@@ -41,18 +37,18 @@ type CopernicusRequest struct {
 type CopernicusResult struct {
 	Features []copernicusFeature `json:"features"`
 	Type     string              `json:"type"`
-	Links    []link              `json:"links"`
+	Links    []copernicusLink    `json:"links"`
 }
 
 type copernicusFeature struct {
-	Id         string            `json:"id"`
-	Geometry   order.Geometry    `json:"geometry"`
-	Assets     featureAssets     `json:"assets"`
-	Properties featureProperties `json:"properties"`
-	Collection string            `json:"collection"`
+	Id         string                      `json:"id"`
+	Geometry   order.Geometry              `json:"geometry"`
+	Assets     copernicusFeatureAssets     `json:"assets"`
+	Properties copernicusFeatureProperties `json:"properties"`
+	Collection string                      `json:"collection"`
 }
 
-type featureAssets struct {
+type copernicusFeatureAssets struct {
 	Product product `json:"PRODUCT"`
 }
 
@@ -60,23 +56,16 @@ type product struct {
 	Href string `json:"href"`
 }
 
-type featureProperties struct {
+type copernicusFeatureProperties struct {
 	Datetime            time.Time `json:"datetime"`
 	PlatformShortName   string    `json:"platformShortName"`
 	InstrumentShortName string    `json:"instrumentShortName"`
 }
 
-type link struct {
+type copernicusLink struct {
 	Rel  string `json:"rel"`
 	Href string `json:"href"`
 	Type string `json:"type"`
-}
-
-type copernicusAuth struct {
-	GrantType string `json:"grant_type"`
-	ClientId  string `json:"client_id"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
 }
 
 const maxFeaturesInResult = 50
@@ -101,19 +90,19 @@ func randCopernicusFeature() copernicusFeature {
 	}
 }
 
-func randFeatureProperties() featureProperties {
+func randFeatureProperties() copernicusFeatureProperties {
 	pastTime := chaos.PastTime(time.Now())
-	return featureProperties{
+	return copernicusFeatureProperties{
 		Datetime:            pastTime,
 		PlatformShortName:   "SENTINEL-1",
 		InstrumentShortName: "SAR",
 	}
 }
 
-func randFeatureAssets() featureAssets {
+func randFeatureAssets() copernicusFeatureAssets {
 	href := strings.Join([]string{"https:/fakelink.eu/odata/v1/Products", chaos.UUID()}, "")
 
-	return featureAssets{
+	return copernicusFeatureAssets{
 		Product: product{Href: href},
 	}
 }
@@ -147,20 +136,6 @@ func getToken() string {
 		return token
 	}
 	return ""
-}
-
-func connect() *mongo.Client {
-	uri := os.Getenv("DB_URL")
-
-	// ServerAPIOptions must be declared with an APIversion. ServerAPIVersion1
-	// is a constant equal to "1".
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	serverAPIClient, err := mongo.Connect(
-		options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
-	if err != nil {
-		panic(err)
-	}
-	return serverAPIClient
 }
 
 func handleDBInsert(client *mongo.Client, feat copernicusFeature) {
@@ -215,7 +190,7 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 	var copRes CopernicusResult
 	json.NewDecoder(resp.Body).Decode(&copRes)
 
-	client := connect()
+	client := order.Connect()
 	insertFeatures(client, copRes.Features)
 	link = getNextLink(copRes)
 	if link != "" {

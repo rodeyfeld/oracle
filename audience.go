@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
 
@@ -14,15 +15,21 @@ import (
 	"oracle.com/soothsayer"
 )
 
-const LOCAL_MODE = true
+var debugModeStr = os.Getenv("DEBUG_MODE")
+var DebugMode bool
 
 func main() {
+	DebugMode = true
+	if debugModeStr == "false" {
+		DebugMode = false
+	}
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPastCold", AttendPastCold)
+	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
 	log.Print("Running server")
@@ -57,7 +64,7 @@ func AttendPastCold(w http.ResponseWriter, req *http.Request) {
 }
 
 func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
-	log.SetPrefix("audience: ")
+	log.SetPrefix("audience: [AttendAudiencePast] ")
 	s := bodyToString(req)
 	var areq scholar.ArchiveRequest
 	// Convert json string body to internal struct
@@ -67,7 +74,13 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Attend to request, get archive results
-	ares := scholar.Study(areq)
+	var ares scholar.ArchiveResults
+	if DebugMode {
+		ares = scholar.Study(areq)
+	} else {
+		ares = scholar.Recite(areq)
+
+	}
 	// log is global, reset prefix after scholars is complete
 
 	log.SetPrefix("audiences: ")
@@ -75,6 +88,7 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 		log.Print(err)
 	}
 
+	log.SetPrefix("audience: [AttendAudiencePast] ")
 	// If no error was returned, print the returned ConfidenceScore
 	// to the console.
 	log.Print(fmt.Sprintf("[%v|%s] Ran archivesearch! Result count: %v", ares.ArchiveFinderId, ares.Id, len(ares.Result.Features)))
