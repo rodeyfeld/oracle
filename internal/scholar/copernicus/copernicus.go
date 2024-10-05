@@ -108,7 +108,6 @@ func randFeatureAssets() copernicusFeatureAssets {
 }
 
 func getToken() string {
-	log.SetPrefix("copernicus[auth]: ")
 
 	data := url.Values{}
 	data.Set("client_id", "cdse-public")
@@ -235,6 +234,7 @@ func scanCollection(collection string) {
 
 func Teach() {
 	// token := getToken()
+	log.SetPrefix("copernicus: [Teach] ")
 	scanCollection("SENTINEL-1")
 
 }

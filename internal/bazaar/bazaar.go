@@ -25,7 +25,7 @@ type BazaarResult struct {
 }
 
 func Purchase(breq BazaarRequest) (BazaarResult, error) {
-	log.SetPrefix("bazaar: ")
+	log.SetPrefix("bazaar: [Purchase] ")
 	// Create a random ID for this request
 	id := chaos.UUID()
 	log.Print(fmt.Sprintf("[%s]: Purchasing for request", id))
