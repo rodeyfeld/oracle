@@ -14,19 +14,23 @@ import (
 	"oracle.com/soothsayer"
 )
 
-var debugModeStr = os.Getenv("DEBUG_MODE")
 var DebugMode bool
 
 func main() {
-	DebugMode = true
-	if debugModeStr == "false" {
-		DebugMode = false
-	}
 
+	// Env handling
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	debugModeStr := os.Getenv("DEBUG_MODE")
+
+	DebugMode = false
+	if debugModeStr == "true" {
+		DebugMode = true
+	}
+
+	// Server routing
 	http.HandleFunc("/createCatalogs", CreateCatalogs)
 	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
@@ -48,7 +52,6 @@ func bodyToString(req *http.Request) string {
 	log.Print(string(body[:]))
 	// Convert the input data into a string
 	var s string
-
 	err = json.Unmarshal(body, &s)
 	if err != nil {
 		log.Print(err)
