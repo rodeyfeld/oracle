@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -28,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	http.HandleFunc("/attendPastCold", AttendPastCold)
+	http.HandleFunc("/createCatalogs", CreateCatalogs)
 	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
@@ -46,7 +45,7 @@ func bodyToString(req *http.Request) string {
 	}
 	req.Body.Close()
 
-	log.Print(fmt.Sprintf(string(body[:])))
+	log.Print(string(body[:]))
 	// Convert the input data into a string
 	var s string
 
@@ -57,10 +56,8 @@ func bodyToString(req *http.Request) string {
 	return s
 }
 
-func AttendPastCold(w http.ResponseWriter, req *http.Request) {
-	ares := scholar.Scribe()
-	log.Print(fmt.Sprintf("SCRIBE: %s", ares))
-
+func CreateCatalogs(w http.ResponseWriter, req *http.Request) {
+	scholar.Enscribe()
 }
 
 func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
@@ -70,7 +67,7 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 	// Convert json string body to internal struct
 	err := json.Unmarshal([]byte(s), &areq)
 	if err != nil {
-		log.Panic(fmt.Sprintf("Failed unmarshaling audience request! Unable to process archive request"))
+		log.Panicf("Failed unmarshaling audience request! Unable to process archive request")
 	}
 
 	// Attend to request, get archive results
@@ -81,18 +78,9 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 		ares = scholar.Recite(areq)
 
 	}
-	// log is global, reset prefix after scholars is complete
-
-	log.SetPrefix("audiences: ")
 	if err != nil {
 		log.Print(err)
 	}
-
-	log.SetPrefix("audience: [AttendAudiencePast] ")
-	// If no error was returned, print the returned ConfidenceScore
-	// to the console.
-	log.Print(fmt.Sprintf("[%v|%s] Ran archivesearch! Result count: %v", ares.ArchiveFinderId, ares.Id, len(ares.Result.Features)))
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(ares)
@@ -100,27 +88,19 @@ func AttendAudiencePast(w http.ResponseWriter, req *http.Request) {
 }
 
 func AttendAudiencePresent(w http.ResponseWriter, req *http.Request) {
-	log.SetPrefix("audience: ")
+	log.SetPrefix("audience: [AttendAudiencePresent] ")
 	s := bodyToString(req)
 	var breq bazaar.BazaarRequest
-	// Convert json string body to internal struct
 	err := json.Unmarshal([]byte(s), &breq)
 	if err != nil {
-		log.Panic(fmt.Sprintf("Faield unmarshaling audience request! Unable to process feasibility request"))
+		log.Panicf("Failed unmarshaling audience request! Unable to process order request")
 	}
 
-	// Attend to request, get feasibility result
+	// Attend to request, get order result
 	bres, err := bazaar.Purchase(breq)
-
-	// log is global, reset prefix after soothsayers is complete
-	log.SetPrefix("audience: ")
 	if err != nil {
 		log.Print(err)
 	}
-
-	// If no error was returned, print the returned ConfidenceScore
-	// to the console.
-	log.Print(fmt.Sprintf("%s Ran tasking!", bres.Id))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -129,27 +109,20 @@ func AttendAudiencePresent(w http.ResponseWriter, req *http.Request) {
 }
 
 func AttendAudienceFuture(w http.ResponseWriter, req *http.Request) {
-	log.SetPrefix("audience: ")
+	log.SetPrefix("audience: [AttendAudienceFuture] ")
 	s := bodyToString(req)
 	var freq soothsayer.FeasibilityRequest
-	// Convert json string body to internal struct
 	err := json.Unmarshal([]byte(s), &freq)
 	if err != nil {
-		log.Panic(fmt.Sprintf("Faield unmarshaling audience request! Unable to process feasibility request"))
+		log.Panicf("Failed unmarshaling audience request! Unable to process feasibility request")
 	}
 
 	// Attend to request, get feasibility result
 	fres, err := soothsayer.Predict(freq)
 
-	// log is global, reset prefix after soothsayers is complete
-	log.SetPrefix("audience: ")
 	if err != nil {
 		log.Print(err)
 	}
-
-	// If no error was returned, print the returned ConfidenceScore
-	// to the console.
-	log.Print(fmt.Sprintf("[%v|%s] Ran feasibility! Confidence score: %v", fres.FeasibilityFinderId, fres.Id, fres.ConfidenceScore))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
