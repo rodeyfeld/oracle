@@ -4,9 +4,9 @@ services:
       context: .
       target: builder
     ports: 
-      - '7777:8080'
+      - '7777:7777'
     networks: # Networks to join (Services on the same network can communicate with each other using their name)
-      - backend
+      - oraclenet
 
   mongo:
     image: mongo
@@ -17,7 +17,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example    
     networks: # Networks to join (Services on the same network can communicate with each other using their name)
-      - backend
+      - oraclenet
 
   mongo-express:
     image: mongo-express
@@ -31,8 +31,8 @@ services:
       ME_CONFIG_BASICAUTH: false
 
     networks: # Networks to join (Services on the same network can communicate with each other using their name)
-      - backend
+      - oraclenet
 
 networks:
-  backend:   
+  oraclenet:   
     driver: bridge
