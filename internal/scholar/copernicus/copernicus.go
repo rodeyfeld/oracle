@@ -235,7 +235,7 @@ func scanCollection(provider string, collection string) {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
 		lastMonthTime := d.AddDate(0, -1, 0)
