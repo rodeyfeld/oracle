@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"oracle.com/chaos"
 	"oracle.com/copernicus"
 	"oracle.com/order"
@@ -61,47 +62,71 @@ type ArchiveRequest struct {
 	Type            string    `json:"type"`
 }
 
-func getDBResults(areq ArchiveRequest) ArchiveResults {
-	client := order.Connect()
+func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string) Collection {
 
-	// Access the catalog database and sentinel_one collection
-	collection := client.Database("catalog").Collection("sentinel_one")
-
-	// Define the filter for the datetime field
+	pc := db.Collection(pcn)
 	filter := bson.M{
-		"properties.datetime": bson.M{
+		"feature.start_date": bson.M{
 			"$gte": areq.StartDate,
+		},
+		"feature.end_date": bson.M{
 			"$lte": areq.EndDate,
 		},
 	}
-
-	// Find all documents matching the filter
-	cursor, err := collection.Find(context.Background(), filter)
+	cursor, err := pc.Find(context.Background(), filter)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cursor.Close(context.Background())
 
-	// Iterate through the cursor and print each document
+	// Iterate over the documents
 	for cursor.Next(context.Background()) {
-		var document bson.M
-		if err := cursor.Decode(&document); err != nil {
+		var f Feature
+		if err := cursor.Decode(&f); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(document)
+
+		// Process the document
+		fmt.Println(f)
+	}
+}
+
+func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog {
+	catalog_names := []string{
+		copernicus.ProviderName,
+	}
+	catalogs := make([]Catalog, 0)
+
+	for _, cn := range catalog_names {
+		db := client.Database(cn)
+		providerCollectionNames, err := db.ListCollectionNames(context.Background(), bson.M{})
+		catalog := Catalog{
+			Name:        cn,
+			Collections: make([]Collection, 0),
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, pcn := range providerCollectionNames {
+			pc := queryProviderCollection(db, areq, pcn)
+			catalog.Collections = append(catalog.Collections, pc)
+		}
+		catalogs = append(catalogs, catalog)
+	}
+	return catalogs
+
+}
+
+func getDBResults(areq ArchiveRequest) ArchiveResults {
+	client := order.Connect()
+	ars := ArchiveResults{
+		Id:              chaos.UUID(),
+		ArchiveFinderId: areq.ArchiveFinderId,
+		Catalogs:        queryProviderCatalogs(client, areq),
 	}
 
-	// Check for cursor errors
-	if err := cursor.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Disconnect from MongoDB
-	if err := client.Disconnect(context.TODO()); err != nil {
-		log.Fatal(err)
-	}
-	ars := ArchiveResults{}
 	return ars
+
 }
 
 func randFeature() Feature {
@@ -148,7 +173,7 @@ func randCatalog() Catalog {
 }
 
 func RandArchiveResults(afi int) ArchiveResults {
-	cs := make([]Catalog, 3)
+	cs := make([]Catalog, 2)
 	cs[0] = randCatalog()
 	cs[1] = randCatalog()
 	return ArchiveResults{

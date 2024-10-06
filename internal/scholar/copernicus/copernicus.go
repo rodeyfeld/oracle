@@ -69,6 +69,7 @@ type copernicusLink struct {
 }
 
 const maxFeaturesInResult = 50
+const ProviderName string = "Copernicus"
 
 func RandCopernicusResult() CopernicusResult {
 	var cfs []copernicusFeature
@@ -137,12 +138,11 @@ func getToken() string {
 	return ""
 }
 
-func handleDBInsert(client *mongo.Client, feat copernicusFeature) {
-	_, err := client.Database("catalog").Collection("sentinel_one").InsertOne(context.Background(), feat)
+func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeature) {
+	_, err := client.Database(p).Collection(c).InsertOne(context.Background(), cf)
 	if err != nil {
 		log.Print(err)
 	}
-
 }
 
 func getNextLink(copRes CopernicusResult) string {
@@ -152,16 +152,15 @@ func getNextLink(copRes CopernicusResult) string {
 		}
 	}
 	return ""
-
 }
 
-func insertFeatures(client *mongo.Client, feats []copernicusFeature) {
-	for _, feat := range feats {
-		handleDBInsert(client, feat)
+func insertFeatures(client *mongo.Client, p string, c string, feats []copernicusFeature) {
+	for _, f := range feats {
+		handleDBInsert(client, p, c, f)
 	}
 }
 
-func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.Time, link string) {
+func searchCollectionByDatetimeRange(provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
 
 	dtRange := fmt.Sprintf("%s/%s", dt1.Format(time.RFC3339), dt2.Format(time.RFC3339))
 
@@ -190,14 +189,15 @@ func searchCollectionByDatetimeRange(collection string, dt1 time.Time, dt2 time.
 	json.NewDecoder(resp.Body).Decode(&copRes)
 
 	client := order.Connect()
-	insertFeatures(client, copRes.Features)
+	insertFeatures(client, provider, collection, copRes.Features)
 	link = getNextLink(copRes)
 	if link != "" {
-		searchCollectionByDatetimeRange(collection, dt1, dt2, link)
+		searchCollectionByDatetimeRange(provider, collection, dt1, dt2, link)
 	}
 }
 
 type workerJob struct {
+	provider   string
 	collection string
 	dt1        time.Time
 	dt2        time.Time
@@ -206,11 +206,11 @@ type workerJob struct {
 
 func worker(id int, jobs <-chan workerJob) {
 	for j := range jobs {
-		searchCollectionByDatetimeRange(j.collection, j.dt1, j.dt2, j.url)
+		searchCollectionByDatetimeRange(j.provider, j.collection, j.dt1, j.dt2, j.url)
 	}
 }
 
-func scanCollection(collection string) {
+func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
@@ -223,6 +223,7 @@ func scanCollection(collection string) {
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
 		lastMonthTime := d.AddDate(0, -1, 0)
 		jobs <- workerJob{
+			provider:   provider,
 			collection: collection,
 			dt1:        lastMonthTime,
 			dt2:        d,
@@ -233,8 +234,14 @@ func scanCollection(collection string) {
 }
 
 func Teach() {
-	// token := getToken()
 	log.SetPrefix("copernicus: [Teach] ")
-	scanCollection("SENTINEL-1")
+	// token := getToken()
+	collections := []string{
+		"SENTINEL-1",
+		"SENTINEL-2",
+	}
+	for _, c := range collections {
+		scanCollection(ProviderName, c)
+	}
 
 }
