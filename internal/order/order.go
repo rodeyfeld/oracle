@@ -2,6 +2,7 @@ package order
 
 import (
 	"os"
+	"time"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -28,6 +29,30 @@ type Rules struct {
 type Geometry struct {
 	Type        string        `json:"type"`
 	Coordinates [][][]float32 `json:"coordinates"`
+}
+
+type Product struct {
+	Href string `json:"href"`
+}
+
+type FeatureAssets struct {
+	Product Product `json:"product"`
+}
+
+type FeatureProperties struct {
+	PlatformShortName   string `json:"platformShortName"`
+	InstrumentShortName string `json:"instrumentShortName"`
+}
+
+type Feature struct {
+	Id         string            `json:"id" bson:"id"`
+	Geometry   Geometry          `json:"geometry" bson:"geometry"`
+	StartDate  time.Time         `json:"start_date" bson:"start_date"`
+	EndDate    time.Time         `json:"end_date" bson:"end_date"`
+	SensorType string            `json:"sensor_type" bson:"sensor_type"`
+	Assets     FeatureAssets     `json:"assets" bson:"assets"`
+	Properties FeatureProperties `json:"properties" bson:"properties"`
+	Collection string            `json:"collection" bson:"collection"`
 }
 
 func Connect() *mongo.Client {

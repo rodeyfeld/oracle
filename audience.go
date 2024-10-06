@@ -29,6 +29,7 @@ func main() {
 	if debugModeStr == "true" {
 		DebugMode = true
 	}
+	log.Printf("Debug mode=%t", DebugMode)
 
 	// Server routing
 	http.HandleFunc("/createCatalogs", CreateCatalogs)
@@ -60,6 +61,7 @@ func bodyToString(req *http.Request) string {
 }
 
 func CreateCatalogs(w http.ResponseWriter, req *http.Request) {
+	log.SetPrefix("audience: [CreateCatalogs] ")
 	scholar.Enscribe()
 }
 

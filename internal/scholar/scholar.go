@@ -3,7 +3,6 @@ package scholar
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
@@ -14,80 +13,56 @@ import (
 	"oracle.com/order"
 )
 
-type product struct {
-	Href string `json:"href"`
-}
-
-type featureAssets struct {
-	Product product `json:"product"`
-}
-
-type featureProperties struct {
-	PlatformShortName   string `json:"platformShortName"`
-	InstrumentShortName string `json:"instrumentShortName"`
-}
-
-type Feature struct {
-	Id         string            `json:"id"`
-	Geometry   order.Geometry    `json:"geometry"`
-	StartDate  time.Time         `json:"start_date"`
-	EndDate    time.Time         `json:"end_date"`
-	Assets     featureAssets     `json:"assets"`
-	Properties featureProperties `json:"properties"`
-	Collection string            `json:"collection"`
-}
-
-type Collection struct {
-	Name       string    `json:"name"`
-	SensorType string    `json:"sensor_type"`
-	Features   []Feature `json:"features"`
+type ProviderCollection struct {
+	Name       string          `json:"name" bson:"name" `
+	SensorType string          `json:"sensor_type" bson:"sensor_type" `
+	Features   []order.Feature `json:"features" bson:"features" `
 }
 
 type Catalog struct {
-	Name        string       `json:"name"`
-	Collections []Collection `json:"collections"`
+	Name        string               `json:"name" bson:"name" `
+	Collections []ProviderCollection `json:"collections" bson:"collections" `
 }
 
 type ArchiveResults struct {
-	Id              string    `json:"id"`
-	ArchiveFinderId int       `json:"archive_finder_id"`
-	Catalogs        []Catalog `json:"catalogs"`
+	Id              string    `json:"id" bson:"id" `
+	ArchiveFinderId int       `json:"archive_finder_id" bson:"archive_finder_id" `
+	Catalogs        []Catalog `json:"catalogs" bson:"catalogs" `
 }
 
 type ArchiveRequest struct {
-	ArchiveFinderId int       `json:"archive_finder_id"`
-	StartDate       time.Time `json:"start_date"`
-	EndDate         time.Time `json:"end_date"`
-	Geometry        string    `json:"geometry"`
-	Type            string    `json:"type"`
+	ArchiveFinderId int       `json:"archive_finder_id" bson:"archive_finder_id" `
+	StartDate       time.Time `json:"start_date" bson:"start_date" `
+	EndDate         time.Time `json:"end_date" bson:"end_date" `
+	Geometry        string    `json:"geometry" bson:"geometry" `
+	Type            string    `json:"type" bson:"type" `
 }
 
-func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string) Collection {
+func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string) ProviderCollection {
 
 	pc := db.Collection(pcn)
 	filter := bson.M{
-		"feature.start_date": bson.M{
-			"$gte": areq.StartDate,
+		"start_date": bson.M{
+			"$gte": areq.StartDate.UTC(),
 		},
-		"feature.end_date": bson.M{
-			"$lte": areq.EndDate,
+		"end_date": bson.M{
+			"$lte": areq.EndDate.UTC(),
 		},
 	}
+	log.Println(filter)
 	cursor, err := pc.Find(context.Background(), filter)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cursor.Close(context.Background())
 
-	// Iterate over the documents
-	for cursor.Next(context.Background()) {
-		var f Feature
-		if err := cursor.Decode(&f); err != nil {
-			log.Fatal(err)
-		}
-
-		// Process the document
-		fmt.Println(f)
+	var features []order.Feature
+	if err := cursor.All(context.Background(), &features); err != nil {
+		log.Fatal(err)
+	}
+	return ProviderCollection{
+		Name:     pcn,
+		Features: features,
 	}
 }
 
@@ -102,7 +77,7 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 		providerCollectionNames, err := db.ListCollectionNames(context.Background(), bson.M{})
 		catalog := Catalog{
 			Name:        cn,
-			Collections: make([]Collection, 0),
+			Collections: make([]ProviderCollection, 0),
 		}
 		if err != nil {
 			log.Fatal(err)
@@ -114,29 +89,28 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 		catalogs = append(catalogs, catalog)
 	}
 	return catalogs
-
 }
 
 func getDBResults(areq ArchiveRequest) ArchiveResults {
 	client := order.Connect()
+	id := chaos.UUID()
+	log.Printf("%s]: Getting database results for run ", id)
 	ars := ArchiveResults{
-		Id:              chaos.UUID(),
+		Id:              id,
 		ArchiveFinderId: areq.ArchiveFinderId,
 		Catalogs:        queryProviderCatalogs(client, areq),
 	}
-
 	return ars
-
 }
 
-func randFeature() Feature {
+func randFeature() order.Feature {
 	cf := copernicus.RandCopernicusFeature()
 	cfjson, err := json.Marshal(cf)
 	if err != nil {
 		log.Print("Failed Marshaling during random feature data")
 	}
 
-	f := Feature{
+	f := order.Feature{
 		StartDate: chaos.PastTime(time.Date(
 			2009, 11, 10, 20, 34, 0, 651387237, time.UTC)),
 		EndDate: chaos.PastTime(time.Date(
@@ -150,19 +124,19 @@ func randFeature() Feature {
 	return f
 }
 
-func randCollection() Collection {
-	fs := make([]Feature, 2)
+func randCollection() ProviderCollection {
+	fs := make([]order.Feature, 2)
 	fs[0] = randFeature()
 	fs[1] = randFeature()
 
-	return Collection{
+	return ProviderCollection{
 		Name:     chaos.CollectionName(),
 		Features: fs,
 	}
 }
 
 func randCatalog() Catalog {
-	cs := make([]Collection, 2)
+	cs := make([]ProviderCollection, 2)
 	cs[0] = randCollection()
 	cs[1] = randCollection()
 	return Catalog{
@@ -202,6 +176,7 @@ func Enscribe() string {
 	log.SetPrefix("scholar: [Enscribe] ")
 	// Create a random ID for this request
 	id := chaos.UUID()
+	log.Printf("%s]: Learning from teachers ", id)
 	copernicus.Teach()
 	return id
 }

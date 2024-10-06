@@ -20,52 +20,52 @@ import (
 )
 
 type copernicusAuth struct {
-	GrantType string `json:"grant_type"`
-	ClientId  string `json:"client_id"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
+	GrantType string `json:"grant_type" `
+	ClientId  string `json:"client_id" `
+	Username  string `json:"username" `
+	Password  string `json:"password" `
 }
 
 type CopernicusRequest struct {
-	Collections string `json:"collections"`
-	Datetime    string `json:"datetime"`
-	Sortby      string `json:"sortby"`
-	Limit       string `json:"limit"`
-	Bbox        string `json:"bbox"`
+	Collections string `json:"collections" `
+	Datetime    string `json:"datetime" `
+	Sortby      string `json:"sortby" `
+	Limit       string `json:"limit" `
+	Bbox        string `json:"bbox" `
 }
 
 type CopernicusResult struct {
-	Features []copernicusFeature `json:"features"`
-	Type     string              `json:"type"`
-	Links    []copernicusLink    `json:"links"`
+	Features []copernicusFeature `json:"features" `
+	Type     string              `json:"type" `
+	Links    []copernicusLink    `json:"links" `
 }
 
 type copernicusFeature struct {
-	Id         string                      `json:"id"`
-	Geometry   order.Geometry              `json:"geometry"`
-	Assets     copernicusFeatureAssets     `json:"assets"`
-	Properties copernicusFeatureProperties `json:"properties"`
-	Collection string                      `json:"collection"`
+	Id         string                      `json:"id" `
+	Geometry   order.Geometry              `json:"geometry" `
+	Assets     copernicusFeatureAssets     `json:"assets" `
+	Properties copernicusFeatureProperties `json:"properties" `
+	Collection string                      `json:"collection" `
 }
 
 type copernicusFeatureAssets struct {
-	Product product `json:"PRODUCT"`
+	Product product `json:"PRODUCT" `
 }
 
 type product struct {
-	Href string `json:"href"`
+	Href string `json:"href" `
 }
 
 type copernicusFeatureProperties struct {
-	Datetime            time.Time `json:"datetime"`
-	PlatformShortName   string    `json:"platformShortName"`
-	InstrumentShortName string    `json:"instrumentShortName"`
+	Datetime            time.Time `json:"datetime" `
+	PlatformShortName   string    `json:"platformShortName" `
+	InstrumentShortName string    `json:"instrumentShortName" `
 }
 
 type copernicusLink struct {
-	Rel  string `json:"rel"`
-	Href string `json:"href"`
-	Type string `json:"type"`
+	Rel  string `json:"rel" `
+	Href string `json:"href" `
+	Type string `json:"type" `
 }
 
 const maxFeaturesInResult = 50
@@ -139,7 +139,24 @@ func getToken() string {
 }
 
 func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeature) {
-	_, err := client.Database(p).Collection(c).InsertOne(context.Background(), cf)
+	f := order.Feature{
+		Id:        cf.Id,
+		Geometry:  cf.Geometry,
+		StartDate: cf.Properties.Datetime,
+		EndDate:   cf.Properties.Datetime,
+		Assets: order.FeatureAssets{
+			Product: order.Product{
+				Href: cf.Assets.Product.Href,
+			},
+		},
+		Properties: order.FeatureProperties{
+			PlatformShortName:   cf.Properties.PlatformShortName,
+			InstrumentShortName: cf.Properties.InstrumentShortName,
+		},
+		Collection: cf.Collection,
+	}
+
+	_, err := client.Database(p).Collection(c).InsertOne(context.Background(), f)
 	if err != nil {
 		log.Print(err)
 	}
@@ -218,7 +235,7 @@ func scanCollection(provider string, collection string) {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2013, 1, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
 		lastMonthTime := d.AddDate(0, -1, 0)
