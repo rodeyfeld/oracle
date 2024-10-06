@@ -100,14 +100,14 @@ func Coord(x float32, y float32) []float32 {
 }
 
 func Polygon() [][][]float32 {
-	pcs := make([][]float32, 1)
+	pcs := make([][]float32, 0)
 	pcs = append(pcs, Coord(0, 0))
 	pcs = append(pcs, Coord(0, 1))
-	pcs = append(pcs, Coord(1, 0))
 	pcs = append(pcs, Coord(1, 1))
+	pcs = append(pcs, Coord(1, 0))
+	pcs = append(pcs, Coord(0, 0))
 
-	polygon := make([][][]float32, 1)
-	polygon = append(polygon, pcs)
+	polygon := [][][]float32{pcs} // Wrap in an additional slice for the GeoJSON format
 	return polygon
 }
 
