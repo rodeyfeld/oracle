@@ -33,15 +33,21 @@ type Geometry struct {
 
 type Product struct {
 	Href string `json:"href"`
+	Type string `json:"type"`
+}
+type Thumbnail struct {
+	Href string `json:"href"`
+	Type string `json:"type"`
 }
 
 type FeatureAssets struct {
-	Product Product `json:"product"`
+	Product   Product   `json:"product"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type FeatureProperties struct {
-	PlatformShortName   string `json:"platformShortName"`
-	InstrumentShortName string `json:"instrumentShortName"`
+	InstrumentName string  `json:"instrument_name"`
+	CloudCoverPct  float32 `json:"cloud_cover_pct"`
 }
 
 type Feature struct {

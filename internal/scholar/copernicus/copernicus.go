@@ -49,17 +49,37 @@ type copernicusFeature struct {
 }
 
 type copernicusFeatureAssets struct {
-	Product product `json:"PRODUCT" `
+	Product   product   `json:"PRODUCT" `
+	Quicklook quicklook `json:"QUICKLOOK" `
 }
 
 type product struct {
 	Href string `json:"href" `
+	Type string `json:"type"`
+}
+type quicklook struct {
+	Href string `json:"href" `
+	Type string `json:"type"`
 }
 
 type copernicusFeatureProperties struct {
-	Datetime            time.Time `json:"datetime" `
-	PlatformShortName   string    `json:"platformShortName" `
-	InstrumentShortName string    `json:"instrumentShortName" `
+	Origin                   string    `json:"origin"`                   //: "CLOUDFERRO",
+	TileId                   string    `json:"tileId"`                   //: "33SXA",
+	CloudCover               float32   `json:"cloudCover"`               //: 0,
+	OrbitNumber              int       `json:"orbitNumber"`              //: 319,
+	OrbitDirection           string    `json:"orbitDirection"`           //: "DESCENDING",
+	ProductGroupId           string    `json:"productGroupId"`           //: "GS2A_20150715T094306_000319_N02.04",
+	ProcessingLevel          string    `json:"processingLevel"`          //: "S2MSI2A",
+	ProcessorVersion         string    `json:"processorVersion"`         //: "02.05",
+	PlatformShortName        string    `json:"platformShortName"`        //: "SENTINEL-2",
+	InstrumentShortName      string    `json:"instrumentShortName"`      //: "MSI",
+	RelativeOrbitNumber      int       `json:"relativeOrbitNumber"`      //: 36,
+	PlatformSerialIdentifier string    `json:"platformSerialIdentifier"` //: "A",
+	Datetime                 time.Time `json:"datetime"`                 //: "2015-07-15T09:43:06.029000Z",
+	EndDatetime              time.Time `json:"end_datetime"`             //: "2015-07-15T09:43:06.029000Z",
+	StartDatetime            time.Time `json:"start_datetime"`           //: "2015-07-15T09:43:06.029000Z",
+	ProductType              string    `json:"productType"`              //: "S2MSI2A"
+
 }
 
 type copernicusLink struct {
@@ -139,21 +159,28 @@ func getToken() string {
 }
 
 func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeature) {
+
 	f := order.Feature{
-		Id:        cf.Id,
-		Geometry:  cf.Geometry,
-		StartDate: cf.Properties.Datetime,
-		EndDate:   cf.Properties.Datetime,
+		Id:         cf.Id,
+		Geometry:   cf.Geometry,
+		StartDate:  cf.Properties.StartDatetime,
+		EndDate:    cf.Properties.EndDatetime,
+		SensorType: cf.Properties.InstrumentShortName,
+		Collection: cf.Collection,
 		Assets: order.FeatureAssets{
 			Product: order.Product{
 				Href: cf.Assets.Product.Href,
+				Type: cf.Assets.Product.Type,
+			},
+			Thumbnail: order.Thumbnail{
+				Href: cf.Assets.Quicklook.Href,
+				Type: cf.Assets.Quicklook.Type,
 			},
 		},
 		Properties: order.FeatureProperties{
-			PlatformShortName:   cf.Properties.PlatformShortName,
-			InstrumentShortName: cf.Properties.InstrumentShortName,
+			InstrumentName: cf.Properties.PlatformShortName,
+			CloudCoverPct:  cf.Properties.CloudCover,
 		},
-		Collection: cf.Collection,
 	}
 
 	_, err := client.Database(p).Collection(c).InsertOne(context.Background(), f)
@@ -231,7 +258,7 @@ func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
-	for w := 1; w <= 24; w++ {
+	for w := 1; w <= 64; w++ {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
