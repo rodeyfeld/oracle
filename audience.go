@@ -50,7 +50,7 @@ func bodyToString(req *http.Request) string {
 	}
 	req.Body.Close()
 
-	log.Print(string(body[:]))
+	log.Printf("string body:%s", string(body[:]))
 	// Convert the input data into a string
 	var s string
 	err = json.Unmarshal(body, &s)

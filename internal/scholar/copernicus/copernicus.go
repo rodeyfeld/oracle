@@ -231,7 +231,7 @@ func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
-	for w := 1; w <= 12; w++ {
+	for w := 1; w <= 24; w++ {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
@@ -260,5 +260,4 @@ func Teach() {
 	for _, c := range collections {
 		scanCollection(ProviderName, c)
 	}
-
 }

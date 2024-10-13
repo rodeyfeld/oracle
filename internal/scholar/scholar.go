@@ -49,7 +49,6 @@ func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string
 			"$lte": areq.EndDate.UTC(),
 		},
 	}
-	log.Println(filter)
 	cursor, err := pc.Find(context.Background(), filter)
 	if err != nil {
 		log.Fatal(err)
@@ -91,10 +90,9 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 	return catalogs
 }
 
-func getDBResults(areq ArchiveRequest) ArchiveResults {
+func getDBResults(areq ArchiveRequest, id string) ArchiveResults {
 	client := order.Connect()
-	id := chaos.UUID()
-	log.Printf("%s]: Getting database results for run ", id)
+	log.Printf("[%v|%s]: Getting database results for run", areq.ArchiveFinderId, id)
 	ars := ArchiveResults{
 		Id:              id,
 		ArchiveFinderId: areq.ArchiveFinderId,
@@ -168,7 +166,10 @@ func Study(areq ArchiveRequest) ArchiveResults {
 
 func Recite(areq ArchiveRequest) ArchiveResults {
 	log.SetPrefix("scholar: [Recite] ")
-	ars := getDBResults(areq)
+	// Create a random ID for this request
+	id := chaos.UUID()
+	log.Printf("[%v|%s]: Reciting for request", areq.ArchiveFinderId, id)
+	ars := getDBResults(areq, id)
 	return ars
 }
 
@@ -176,7 +177,7 @@ func Enscribe() string {
 	log.SetPrefix("scholar: [Enscribe] ")
 	// Create a random ID for this request
 	id := chaos.UUID()
-	log.Printf("%s]: Learning from teachers ", id)
+	log.Printf("[_|%s]: Learning from teachers ", id)
 	copernicus.Teach()
 	return id
 }
