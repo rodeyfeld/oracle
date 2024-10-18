@@ -191,7 +191,7 @@ func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeatu
 
 func getNextLink(copRes CopernicusResult) string {
 	for _, link := range copRes.Links {
-		if link.Type == "next" {
+		if link.Rel == "next" {
 			return link.Href
 		}
 	}
@@ -204,7 +204,26 @@ func insertFeatures(client *mongo.Client, p string, c string, feats []copernicus
 	}
 }
 
-func searchCollectionByDatetimeRange(provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
+func searchUrl(id int, client *mongo.Client, url string, provider string, collection string) {
+	log.Printf("worker[%v]: running search for link %s", id, url)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Print(err)
+		log.Panicf("Failed querying copernicus!")
+	}
+	defer resp.Body.Close()
+
+	var copRes CopernicusResult
+	json.NewDecoder(resp.Body).Decode(&copRes)
+
+	insertFeatures(client, provider, collection, copRes.Features)
+	url = getNextLink(copRes)
+	if url != "" {
+		searchUrl(id, client, url, provider, collection)
+	}
+}
+
+func searchCollectionByDatetimeRange(id int, client *mongo.Client, provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
 
 	dtRange := fmt.Sprintf("%s/%s", dt1.Format(time.RFC3339), dt2.Format(time.RFC3339))
 
@@ -221,23 +240,7 @@ func searchCollectionByDatetimeRange(provider string, collection string, dt1 tim
 	params.Set("sortby", reqData.Sortby)
 	params.Set("limit", reqData.Limit)
 	url := fmt.Sprintf("%s?%s", link, params.Encode())
-
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Print(err)
-		log.Panicf("Failed querying copernicus!")
-	}
-	defer resp.Body.Close()
-
-	var copRes CopernicusResult
-	json.NewDecoder(resp.Body).Decode(&copRes)
-
-	client := order.Connect()
-	insertFeatures(client, provider, collection, copRes.Features)
-	link = getNextLink(copRes)
-	if link != "" {
-		searchCollectionByDatetimeRange(provider, collection, dt1, dt2, link)
-	}
+	searchUrl(id, client, url, provider, collection)
 }
 
 type workerJob struct {
@@ -249,23 +252,25 @@ type workerJob struct {
 }
 
 func worker(id int, jobs <-chan workerJob) {
+	client := order.Connect()
 	for j := range jobs {
-		searchCollectionByDatetimeRange(j.provider, j.collection, j.dt1, j.dt2, j.url)
+		searchCollectionByDatetimeRange(id, client, j.provider, j.collection, j.dt1, j.dt2, j.url)
 	}
+	client.Disconnect(context.Background())
 }
 
 func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
-	for w := 1; w <= 64; w++ {
+	for w := 1; w <= 256; w++ {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
 	initialTime := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
-	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
-		lastMonthTime := d.AddDate(0, -1, 0)
+	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
+		lastMonthTime := d.AddDate(0, 0, -1)
 		jobs <- workerJob{
 			provider:   provider,
 			collection: collection,

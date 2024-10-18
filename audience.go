@@ -32,7 +32,7 @@ func main() {
 	log.Printf("Debug mode=%t", DebugMode)
 
 	// Server routing
-	http.HandleFunc("/createCatalogs", CreateCatalogs)
+	// http.HandleFunc("/createCatalogs", CreateCatalogs)
 	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
