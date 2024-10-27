@@ -23,3 +23,6 @@ go.work.sum
 
 # env file
 .env
+
+# install
+go1.23.2.linux-amd64.tar.gz

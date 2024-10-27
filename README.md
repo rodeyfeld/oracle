@@ -1,10 +1,31 @@
 # ORACLE
 Feasibility and Archive Search Generator Data. Written in Go.
 
+
+Install Go:
+https://go.dev/doc/install
+`sudo snap install go --classic`
+
+# Create .env file
+```
+DEBUG_MODE=true
+DB_URL=mongodb://root.example@localhost:27017
+#DOCKER_DB_URL=mongodb://root.example@mongo:27017
+```
+
+
 To launch:
+
+# Local
+```
+go run .
+```
+
+### Docker
 ```
 docker compose up --build
 ```
+
 
 Currently serves four links:
 - http://localhost:7777/attendPastCold: Scrapes the SENTINEL Database (Warning! Consumes massive resources until i figure out buffered channels)
