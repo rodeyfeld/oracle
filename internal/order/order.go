@@ -61,8 +61,8 @@ type Feature struct {
 	Collection string            `json:"collection" bson:"collection"`
 }
 
-func Connect() *mongo.Client {
-	uri := os.Getenv("DB_URL")
+func ConnectMongo() *mongo.Client {
+	uri := os.Getenv("MONGO_DB_URL")
 
 	// ServerAPIOptions must be declared with an APIversion. ServerAPIVersion1
 	// is a constant equal to "1".
@@ -74,3 +74,21 @@ func Connect() *mongo.Client {
 	}
 	return serverAPIClient
 }
+
+// func ConnectPostgres() *pgx.Conn {
+
+// 	uri := os.Getenv("POSTGRES_DB_URL")
+
+// 	ctx, err := pgx.ParseConnectionString(uri)
+// 	if err != nil {
+// 		fmt.Fprintf(os.Stderr, "Unable to parse connection string: %v\n", err)
+// 		os.Exit(1)
+// 	}
+// 	log.Printf(ctx.Host)
+// 	conn, err := pgx.Connect(ctx)
+// 	if err != nil {
+// 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+// 		os.Exit(1)
+// 	}
+// 	return conn
+// }

@@ -91,7 +91,7 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 }
 
 func getDBResults(areq ArchiveRequest, id string) ArchiveResults {
-	client := order.Connect()
+	client := order.ConnectMongo()
 	log.Printf("[%v|%s]: Getting database results for run", areq.ArchiveFinderId, id)
 	ars := ArchiveResults{
 		Id:              id,

@@ -9,8 +9,8 @@ https://go.dev/doc/install
 # Create .env file
 ```
 DEBUG_MODE=true
-DB_URL=mongodb://root.example@localhost:27017
-#DOCKER_DB_URL=mongodb://root.example@mongo:27017
+MONGO_DB_URL=mongodb://root.example@localhost:27017
+#DOCKER_MONGO_DB_URL=mongodb://root.example@mongo:27017
 ```
 
 

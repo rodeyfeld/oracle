@@ -252,7 +252,7 @@ type workerJob struct {
 }
 
 func worker(id int, jobs <-chan workerJob) {
-	client := order.Connect()
+	client := order.ConnectMongo()
 	for j := range jobs {
 		searchCollectionByDatetimeRange(id, client, j.provider, j.collection, j.dt1, j.dt2, j.url)
 	}
@@ -263,18 +263,18 @@ func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
-	for w := 1; w <= 256; w++ {
+	for w := 1; w <= 96; w++ {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
-		lastMonthTime := d.AddDate(0, 0, -1)
+		lastDayTime := d.AddDate(0, 0, -1)
 		jobs <- workerJob{
 			provider:   provider,
 			collection: collection,
-			dt1:        lastMonthTime,
+			dt1:        lastDayTime,
 			dt2:        d,
 			url:        search_url,
 		}
@@ -284,7 +284,6 @@ func scanCollection(provider string, collection string) {
 
 func Teach() {
 	log.SetPrefix("copernicus: [Teach] ")
-	// token := getToken()
 	collections := []string{
 		"SENTINEL-1",
 		"SENTINEL-2",
