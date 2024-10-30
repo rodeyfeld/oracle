@@ -1,5 +1,5 @@
-module oracle.com.internal/bazaar
+module github.com/rodeyfeld/oracle.internal/bazaar
 
 go 1.23.0
 
-replace oracle.com/chaos => ../chaos
+replace github.com/rodeyfeld/oracle/chaos => ../chaos

@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/rodeyfeld/oracle/chaos"
+	"github.com/rodeyfeld/oracle/copernicus"
+	"github.com/rodeyfeld/oracle/order"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"oracle.com/chaos"
-	"oracle.com/copernicus"
-	"oracle.com/order"
 )
 
 type ProviderCollection struct {
@@ -55,10 +55,19 @@ func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string
 	}
 	defer cursor.Close(context.Background())
 
-	var features []order.Feature
-	if err := cursor.All(context.Background(), &features); err != nil {
+	features := make([]order.Feature, 0)
+	for cursor.Next(context.Background()) {
+		var result order.Feature
+		if err := cursor.Decode(&result); err != nil {
+			log.Print("Failed to decode the result")
+			log.Fatal(err)
+		}
+		features = append(features, result)
+	}
+	if err := cursor.Err(); err != nil {
 		log.Fatal(err)
 	}
+	log.Print(len(features))
 	return ProviderCollection{
 		Name:     pcn,
 		Features: features,
@@ -98,6 +107,7 @@ func getDBResults(areq ArchiveRequest, id string) ArchiveResults {
 		ArchiveFinderId: areq.ArchiveFinderId,
 		Catalogs:        queryProviderCatalogs(client, areq),
 	}
+	client.Disconnect(context.Background())
 	return ars
 }
 

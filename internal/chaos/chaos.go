@@ -6,7 +6,8 @@ import (
 	"math/rand"
 	"time"
 
-	"oracle.com/order"
+	"github.com/rodeyfeld/oracle/order"
+	"github.com/venicegeo/geojson-go/geojson"
 )
 
 const minimumFutureSeconds int = 120
@@ -111,8 +112,8 @@ func Polygon() [][][]float32 {
 	return polygon
 }
 
-func GeometryPolygon() order.Geometry {
-	return order.Geometry{
+func GeometryPolygon() geojson.Polygon {
+	return geojson.Polygon{
 		Coordinates: Polygon(),
 		Type:        "Polygon",
 	}

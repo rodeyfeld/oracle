@@ -1,18 +1,18 @@
-module oracle.com.internal/scholar
+module github.com/rodeyfeld/oracle.internal/scholar
 
 go 1.23.0
 
-replace oracle.com/order => ../order
+replace github.com/rodeyfeld/oracle/order => ../order
 
-replace oracle.com/chaos => ../chaos
+replace github.com/rodeyfeld/oracle/chaos => ../chaos
 
-replace oracle.com/copernicus => ./copernicus
+replace github.com/rodeyfeld/oracle/copernicus => ./copernicus
 
 require (
 	go.mongodb.org/mongo-driver/v2 v2.0.0-beta2
-	oracle.com/chaos v0.0.0-00010101000000-000000000000
-	oracle.com/copernicus v0.0.0-00010101000000-000000000000
-	oracle.com/order v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/chaos v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/copernicus v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000
 )
 
 require (

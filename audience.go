@@ -9,9 +9,9 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"oracle.com/bazaar"
-	"oracle.com/scholar"
-	"oracle.com/soothsayer"
+	"github.com/rodeyfeld/oracle/bazaar"
+	"github.com/rodeyfeld/oracle/scholar"
+	"github.com/rodeyfeld/oracle/soothsayer"
 )
 
 var DebugMode bool

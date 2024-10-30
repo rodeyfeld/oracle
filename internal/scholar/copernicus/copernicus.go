@@ -15,8 +15,9 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
-	"oracle.com/chaos"
-	"oracle.com/order"
+	"github.com/rodeyfeld/oracle/chaos"
+	"github.com/rodeyfeld/oracle/order"
+	"github.com/venicegeo/geojson-go/geojson"
 )
 
 type copernicusAuth struct {
@@ -42,7 +43,7 @@ type CopernicusResult struct {
 
 type copernicusFeature struct {
 	Id         string                      `json:"id" `
-	Geometry   order.Geometry              `json:"geometry" `
+	Geometry   geojson.Polygon             `json:"geometry" `
 	Assets     copernicusFeatureAssets     `json:"assets" `
 	Properties copernicusFeatureProperties `json:"properties" `
 	Collection string                      `json:"collection" `

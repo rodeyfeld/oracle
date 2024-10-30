@@ -1,14 +1,14 @@
-module oracle.com.internal/soothsayer
+module github.com/rodeyfeld/oracle.internal/soothsayer
 
 go 1.23.0
 
-replace oracle.com/chaos => ../chaos
+replace github.com/rodeyfeld/oracle/chaos => ../chaos
 
-replace oracle.com/order => ../order
+replace github.com/rodeyfeld/oracle/order => ../order
 
-require oracle.com/chaos v0.0.0-00010101000000-000000000000
+require github.com/rodeyfeld/oracle/chaos v0.0.0-00010101000000-000000000000
 
-require oracle.com/order v0.0.0-00010101000000-000000000000
+require github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect

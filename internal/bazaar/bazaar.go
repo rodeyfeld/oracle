@@ -7,7 +7,7 @@ import (
 
 	"math/rand"
 
-	"oracle.com/chaos"
+	"github.com/rodeyfeld/oracle/chaos"
 )
 
 type BazaarRequest struct {

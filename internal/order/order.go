@@ -1,9 +1,13 @@
 package order
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/venicegeo/geojson-go/geojson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -26,11 +30,6 @@ type Rules struct {
 	SARResolutionMixCm int `json:"sar_resolution_min_cm"`
 }
 
-type Geometry struct {
-	Type        string        `json:"type"`
-	Coordinates [][][]float32 `json:"coordinates"`
-}
-
 type Product struct {
 	Href string `json:"href"`
 	Type string `json:"type"`
@@ -41,8 +40,8 @@ type Thumbnail struct {
 }
 
 type FeatureAssets struct {
-	Product   Product   `json:"product"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	Product   Product `json:"product"`
+	Thumbnail Thumbnail
 }
 
 type FeatureProperties struct {
@@ -52,7 +51,7 @@ type FeatureProperties struct {
 
 type Feature struct {
 	Id         string            `json:"id" bson:"id"`
-	Geometry   Geometry          `json:"geometry" bson:"geometry"`
+	Geometry   geojson.Polygon   `json:"geometry" bson:"geometry"`
 	StartDate  time.Time         `json:"start_date" bson:"start_date"`
 	EndDate    time.Time         `json:"end_date" bson:"end_date"`
 	SensorType string            `json:"sensor_type" bson:"sensor_type"`
@@ -75,20 +74,14 @@ func ConnectMongo() *mongo.Client {
 	return serverAPIClient
 }
 
-// func ConnectPostgres() *pgx.Conn {
+func ConnectPostgres() *pgx.Conn {
 
-// 	uri := os.Getenv("POSTGRES_DB_URL")
+	uri := os.Getenv("POSTGRES_DB_URL")
 
-// 	ctx, err := pgx.ParseConnectionString(uri)
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "Unable to parse connection string: %v\n", err)
-// 		os.Exit(1)
-// 	}
-// 	log.Printf(ctx.Host)
-// 	conn, err := pgx.Connect(ctx)
-// 	if err != nil {
-// 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-// 		os.Exit(1)
-// 	}
-// 	return conn
-// }
+	conn, err := pgx.Connect(context.Background(), uri)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+	return conn
+}

@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"oracle.com/chaos"
-	"oracle.com/order"
+	"github.com/rodeyfeld/oracle/chaos"
+	"github.com/rodeyfeld/oracle/order"
 )
 
 type FeasibilityRequest struct {

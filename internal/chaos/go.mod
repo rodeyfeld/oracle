@@ -1,7 +1,7 @@
-module oracle.com.internal/chaos
+module github.com/rodeyfeld/oracle.internal/chaos
 
 go 1.23.0
 
-replace oracle.com/order => ../order
+replace github.com/rodeyfeld/oracle/order => ../order
 
-require oracle.com/order v0.0.0-00010101000000-000000000000
+require github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000

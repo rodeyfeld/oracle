@@ -1,29 +1,32 @@
-module oracle.com/audience
+module github.com/rodeyfeld/oracle/audience
 
 go 1.23.0
 
-replace oracle.com/soothsayer => ./internal/soothsayer
+replace github.com/rodeyfeld/oracle/soothsayer => ./internal/soothsayer
 
-replace oracle.com/scholar => ./internal/scholar
+replace github.com/rodeyfeld/oracle/scholar => ./internal/scholar
 
-replace oracle.com/copernicus => ./internal/scholar/copernicus
+replace github.com/rodeyfeld/oracle/copernicus => ./internal/scholar/copernicus
 
-replace oracle.com/chaos => ./internal/chaos
+replace github.com/rodeyfeld/oracle/chaos => ./internal/chaos
 
-replace oracle.com/order => ./internal/order
+replace github.com/rodeyfeld/oracle/order => ./internal/order
 
-replace oracle.com/bazaar => ./internal/bazaar
+replace github.com/rodeyfeld/oracle/bazaar => ./internal/bazaar
 
 require (
 	github.com/joho/godotenv v1.5.1
-	oracle.com/bazaar v0.0.0-00010101000000-000000000000
-	oracle.com/scholar v0.0.0-00010101000000-000000000000
-	oracle.com/soothsayer v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/bazaar v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/scholar v0.0.0-00010101000000-000000000000
+	github.com/rodeyfeld/oracle/soothsayer v0.0.0-00010101000000-000000000000
 )
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.17.10 // indirect
+	github.com/rodeyfeld/oracle/chaos v0.0.0-00010101000000-000000000000 // indirect
+	github.com/rodeyfeld/oracle/copernicus v0.0.0-00010101000000-000000000000 // indirect
+	github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
@@ -32,7 +35,4 @@ require (
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
-	oracle.com/chaos v0.0.0-00010101000000-000000000000 // indirect
-	oracle.com/copernicus v0.0.0-00010101000000-000000000000 // indirect
-	oracle.com/order v0.0.0-00010101000000-000000000000 // indirect
 )
