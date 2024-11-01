@@ -23,10 +23,15 @@ require (
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/klauspost/compress v1.17.10 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.7.1 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/rodeyfeld/oracle/chaos v0.0.0-00010101000000-000000000000 // indirect
 	github.com/rodeyfeld/oracle/copernicus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000 // indirect
+	github.com/venicegeo/geojson-go v0.1.0 // indirect
+	github.com/venicegeo/pzsvc-lib v0.0.0-20161208182529-fca89502ff2c // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

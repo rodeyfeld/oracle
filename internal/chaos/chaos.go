@@ -96,19 +96,19 @@ func ConfidenceScore() float32 {
 	return rand.Float32()
 }
 
-func Coord(x float32, y float32) []float32 {
-	return []float32{x, y}
+func Coord(x float64, y float64) []float64 {
+	return []float64{x, y}
 }
 
-func Polygon() [][][]float32 {
-	pcs := make([][]float32, 0)
+func Polygon() [][][]float64 {
+	pcs := make([][]float64, 0)
 	pcs = append(pcs, Coord(0, 0))
 	pcs = append(pcs, Coord(0, 1))
 	pcs = append(pcs, Coord(1, 1))
 	pcs = append(pcs, Coord(1, 0))
 	pcs = append(pcs, Coord(0, 0))
 
-	polygon := [][][]float32{pcs} // Wrap in an additional slice for the GeoJSON format
+	polygon := [][][]float64{pcs} // Wrap in an additional slice for the GeoJSON format
 	return polygon
 }
 
