@@ -1,4 +1,4 @@
-module github.com/rodeyfeld/oracle/internal/chaos
+module github.com/rodeyfeld/oracle/internal/bazaar
 
 go 1.23.0
 
