@@ -2,7 +2,6 @@ package copernicus
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,11 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-
+	"github.com/paulmach/orb/geojson"
 	"github.com/rodeyfeld/oracle/chaos"
 	"github.com/rodeyfeld/oracle/order"
-	"github.com/venicegeo/geojson-go/geojson"
 )
 
 type copernicusAuth struct {
@@ -43,7 +40,7 @@ type CopernicusResult struct {
 
 type copernicusFeature struct {
 	Id         string                      `json:"id" `
-	Geometry   geojson.Polygon             `json:"geometry" `
+	Geometry   *geojson.Feature            `json:"geometry" `
 	Assets     copernicusFeatureAssets     `json:"assets" `
 	Properties copernicusFeatureProperties `json:"properties" `
 	Collection string                      `json:"collection" `
@@ -103,9 +100,12 @@ func RandCopernicusResult() CopernicusResult {
 }
 
 func RandCopernicusFeature() copernicusFeature {
+	randomGeometry := chaos.RandomPolygon(4)
+	geoJson := chaos.PolygonToGeoJSON(randomGeometry)
+
 	return copernicusFeature{
 		Id:         chaos.UUID(),
-		Geometry:   chaos.GeometryPolygon(),
+		Geometry:   geoJson,
 		Assets:     randFeatureAssets(),
 		Properties: randFeatureProperties(),
 		Collection: "SENTINEL-1",
@@ -133,7 +133,7 @@ func getToken() string {
 
 	data := url.Values{}
 	data.Set("client_id", "cdse-public")
-	data.Set("username", "eric.rodefeld@cognitivespace.com")
+	data.Set("username", "eric.d.rodefeld@gmail.com")
 	data.Set("password", "294d1f61294d1f61!@#AZDSFG")
 	data.Set("grant_type", "password")
 
@@ -159,11 +159,10 @@ func getToken() string {
 	return ""
 }
 
-func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeature) {
-
+func handleDBInsert(db order.DatabaseClient, p string, c string, cf copernicusFeature) error {
 	f := order.Feature{
 		Id:         cf.Id,
-		Geometry:   cf.Geometry,
+		Geometry:   cf.Geometry.Geometry,
 		StartDate:  cf.Properties.StartDatetime,
 		EndDate:    cf.Properties.EndDatetime,
 		SensorType: cf.Properties.InstrumentShortName,
@@ -184,10 +183,10 @@ func handleDBInsert(client *mongo.Client, p string, c string, cf copernicusFeatu
 		},
 	}
 
-	_, err := client.Database(p).Collection(c).InsertOne(context.Background(), f)
-	if err != nil {
-		log.Print(err)
+	if err := db.Insert(p, c, f); err != nil {
+		return err
 	}
+	return nil
 }
 
 func getNextLink(copRes CopernicusResult) string {
@@ -199,13 +198,13 @@ func getNextLink(copRes CopernicusResult) string {
 	return ""
 }
 
-func insertFeatures(client *mongo.Client, p string, c string, feats []copernicusFeature) {
+func insertFeatures(db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
 	for _, f := range feats {
-		handleDBInsert(client, p, c, f)
+		handleDBInsert(db, p, c, f)
 	}
 }
 
-func searchUrl(id int, client *mongo.Client, url string, provider string, collection string) {
+func searchUrl(id int, db order.DatabaseClient, url string, provider string, collection string) {
 	log.Printf("worker[%v]: running search for link %s", id, url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -217,14 +216,14 @@ func searchUrl(id int, client *mongo.Client, url string, provider string, collec
 	var copRes CopernicusResult
 	json.NewDecoder(resp.Body).Decode(&copRes)
 
-	insertFeatures(client, provider, collection, copRes.Features)
+	insertFeatures(db, provider, collection, copRes.Features)
 	url = getNextLink(copRes)
 	if url != "" {
-		searchUrl(id, client, url, provider, collection)
+		searchUrl(id, db, url, provider, collection)
 	}
 }
 
-func searchCollectionByDatetimeRange(id int, client *mongo.Client, provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
+func searchCollectionByDatetimeRange(id int, db order.DatabaseClient, provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
 
 	dtRange := fmt.Sprintf("%s/%s", dt1.Format(time.RFC3339), dt2.Format(time.RFC3339))
 
@@ -241,7 +240,7 @@ func searchCollectionByDatetimeRange(id int, client *mongo.Client, provider stri
 	params.Set("sortby", reqData.Sortby)
 	params.Set("limit", reqData.Limit)
 	url := fmt.Sprintf("%s?%s", link, params.Encode())
-	searchUrl(id, client, url, provider, collection)
+	searchUrl(id, db, url, provider, collection)
 }
 
 type workerJob struct {
@@ -253,11 +252,15 @@ type workerJob struct {
 }
 
 func worker(id int, jobs <-chan workerJob) {
-	client := order.ConnectMongo()
-	for j := range jobs {
-		searchCollectionByDatetimeRange(id, client, j.provider, j.collection, j.dt1, j.dt2, j.url)
+	db := &order.PostgresDB{}
+	err := db.Connect()
+	if err != nil {
+		log.Fatal("Could not connect to DB!")
 	}
-	client.Disconnect(context.Background())
+	for j := range jobs {
+		searchCollectionByDatetimeRange(id, db, j.provider, j.collection, j.dt1, j.dt2, j.url)
+	}
+	defer db.Close()
 }
 
 func scanCollection(provider string, collection string) {

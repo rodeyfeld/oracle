@@ -9,10 +9,14 @@ replace github.com/rodeyfeld/oracle/order => ../../order
 replace github.com/rodeyfeld/oracle/scholar => ../scholar
 
 require (
+	github.com/joho/godotenv v1.5.1
 	github.com/rodeyfeld/oracle/chaos v0.0.0-00010101000000-000000000000
 	github.com/rodeyfeld/oracle/order v0.0.0-00010101000000-000000000000
-	github.com/venicegeo/geojson-go v0.1.0
-	go.mongodb.org/mongo-driver/v2 v2.0.0-beta2
+)
+
+require (
+	go.mongodb.org/mongo-driver v1.11.4 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.0.0-beta2 // indirect
 )
 
 require (
@@ -21,7 +25,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.1 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
-	github.com/venicegeo/pzsvc-lib v0.0.0-20161208182529-fca89502ff2c // indirect
+	github.com/paulmach/orb v0.11.1
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

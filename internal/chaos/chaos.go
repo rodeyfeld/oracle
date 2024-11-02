@@ -6,8 +6,9 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/geojson"
 	"github.com/rodeyfeld/oracle/order"
-	"github.com/venicegeo/geojson-go/geojson"
 )
 
 const minimumFutureSeconds int = 120
@@ -100,21 +101,28 @@ func Coord(x float64, y float64) []float64 {
 	return []float64{x, y}
 }
 
-func Polygon() [][][]float64 {
-	pcs := make([][]float64, 0)
-	pcs = append(pcs, Coord(0, 0))
-	pcs = append(pcs, Coord(0, 1))
-	pcs = append(pcs, Coord(1, 1))
-	pcs = append(pcs, Coord(1, 0))
-	pcs = append(pcs, Coord(0, 0))
-
-	polygon := [][][]float64{pcs} // Wrap in an additional slice for the GeoJSON format
-	return polygon
+func randomCoord(min, max float64) float64 {
+	return min + rand.Float64()*(max-min)
 }
 
-func GeometryPolygon() geojson.Polygon {
-	return geojson.Polygon{
-		Coordinates: Polygon(),
-		Type:        "Polygon",
+// Generate a random polygon with a specified number of points
+func RandomPolygon(numPoints int) orb.Polygon {
+	rand.Seed(time.Now().UnixNano()) // Seed random number generator
+
+	points := make([]orb.Ring, 0)
+	outerRing := make([]orb.Point, 0)
+
+	// Create a random outer ring
+	for i := 0; i < numPoints; i++ {
+		lat := randomCoord(-90, 90)   // Latitude range
+		lon := randomCoord(-180, 180) // Longitude range
+		outerRing = append(outerRing, orb.Point{lon, lat})
 	}
+	outerRing = append(outerRing, outerRing[0])
+	points = append(points, outerRing)
+	return orb.Polygon(points)
+}
+
+func PolygonToGeoJSON(polygon orb.Polygon) *geojson.Feature {
+	return geojson.NewFeature(polygon)
 }

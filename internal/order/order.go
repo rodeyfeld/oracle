@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/venicegeo/geojson-go/geojson"
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/encoding/wkt"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -51,7 +52,7 @@ type FeatureProperties struct {
 
 type Feature struct {
 	Id         string            `json:"id" bson:"id"`
-	Geometry   geojson.Polygon   `json:"geometry" bson:"geometry"`
+	Geometry   orb.Geometry      `json:"geometry" bson:"geometry"`
 	StartDate  time.Time         `json:"start_date" bson:"start_date"`
 	EndDate    time.Time         `json:"end_date" bson:"end_date"`
 	SensorType string            `json:"sensor_type" bson:"sensor_type"`
@@ -60,28 +61,113 @@ type Feature struct {
 	Collection string            `json:"collection" bson:"collection"`
 }
 
-func ConnectMongo() *mongo.Client {
-	uri := os.Getenv("MONGO_DB_URL")
-
-	// ServerAPIOptions must be declared with an APIversion. ServerAPIVersion1
-	// is a constant equal to "1".
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	serverAPIClient, err := mongo.Connect(
-		options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
-	if err != nil {
-		panic(err)
-	}
-	return serverAPIClient
+type DatabaseClient interface {
+	Connect() error
+	Insert(p string, c string, f Feature) error
+	QueryCollectionNames() ([]string, error)
+	Close()
 }
 
-func ConnectPostgres() *pgx.Conn {
+type MongoDB struct {
+	client *mongo.Client
+}
+
+func (db *MongoDB) Connect() error {
+	uri := os.Getenv("MONGO_DB_URL")
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
+	client, err := mongo.Connect(
+		options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
+	db.client = client
+	return err
+}
+
+func (db *MongoDB) Insert(p string, c string, f Feature) error {
+	_, err := db.client.Database(p).Collection(c).InsertOne(context.Background(), f)
+	return err
+}
+
+func (db *MongoDB) QueryCollectionNames() ([]string, error) {
+	// TODO Query collection names
+	// db.client.ListCollectionNames(context.Background(), bson.M{})
+	return nil, nil
+}
+
+type PostgresDB struct {
+	client *pgx.Conn
+}
+
+func (db *PostgresDB) Insert(p string, c string, f Feature) error {
+	query := `
+		INSERT INTO augury_archiveitem
+		(
+			created,
+			modified,
+			external_id,
+			provider,
+			geometry,
+			collection,
+			sensor_type,
+			thumbnail,
+			start_date,
+			end_date,
+			metadata
+		)
+		VALUES (
+			CURRENT_TIMESTAMP,
+			CURRENT_TIMESTAMP,
+			@external_id,
+			@provider,
+			ST_GeomFromText(@geometry),
+			@collection,
+			@sensor_type,
+			@thumbnail,
+			@start_date,
+			@end_date,
+			@metadata
+
+		);
+	`
+	args := pgx.NamedArgs{
+		"external_id": f.Id,
+		"provider":    p,
+		"geometry":    wkt.MarshalString(f.Geometry),
+		"collection":  c,
+		"sensor_type": f.SensorType,
+		"thumbnail":   f.Assets.Thumbnail.Href,
+		"start_date":  f.StartDate,
+		"end_date":    f.EndDate,
+		"metadata":    "",
+	}
+	_, err := db.client.Exec(context.Background(), query, args)
+	return err
+}
+
+func (db *PostgresDB) Connect() error {
 
 	uri := os.Getenv("POSTGRES_DB_URL")
 
 	conn, err := pgx.Connect(context.Background(), uri)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
+		return err
 	}
-	return conn
+	db.client = conn
+	return nil
+}
+
+func (db *PostgresDB) Close() {
+
+	db.client.Close(context.Background())
+}
+
+func (db *PostgresDB) QueryCollectionNames() ([]string, error) {
+	// TODO Query collection names
+	// db.client.ListCollectionNames(context.Background(), bson.M{})
+	return nil, nil
+}
+
+func (db *PostgresDB) QueryCollection(string) ([]string, error) {
+	// TODO Query collection names
+	// db.client.ListCollectionNames(context.Background(), bson.M{})
+	return nil, nil
 }

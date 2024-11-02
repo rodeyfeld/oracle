@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"github.com/rodeyfeld/oracle/chaos"
@@ -11,6 +12,7 @@ import (
 	"github.com/rodeyfeld/oracle/order"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type ProviderCollection struct {
@@ -38,9 +40,23 @@ type ArchiveRequest struct {
 	Type            string    `json:"type" bson:"type" `
 }
 
-func queryProviderCollection(db *mongo.Database, areq ArchiveRequest, pcn string) ProviderCollection {
+func ConnectMongo() *mongo.Client {
+	uri := os.Getenv("MONGO_DB_URL")
 
-	pc := db.Collection(pcn)
+	// ServerAPIOptions must be declared with an APIversion. ServerAPIVersion1
+	// is a constant equal to "1".
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
+	serverAPIClient, err := mongo.Connect(
+		options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
+	if err != nil {
+		panic(err)
+	}
+	return serverAPIClient
+}
+
+func queryProviderCollection(client *mongo.Database, areq ArchiveRequest, pcn string) ProviderCollection {
+
+	pc := client.Collection(pcn)
 	filter := bson.M{
 		"start_date": bson.M{
 			"$gte": areq.StartDate.UTC(),
@@ -100,7 +116,7 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 }
 
 func getDBResults(areq ArchiveRequest, id string) ArchiveResults {
-	client := order.ConnectMongo()
+	client := ConnectMongo()
 	log.Printf("[%v|%s]: Getting database results for run", areq.ArchiveFinderId, id)
 	ars := ArchiveResults{
 		Id:              id,

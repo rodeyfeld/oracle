@@ -31,8 +31,13 @@ func main() {
 	}
 	log.Printf("Debug mode=%t", DebugMode)
 
+	// Scrape if env variable set:
+	scrapeMode := os.Getenv("SCRAPE_MODE")
+	if scrapeMode == "true" {
+		scholar.Enscribe()
+	}
+
 	// Server routing
-	// http.HandleFunc("/createCatalogs", CreateCatalogs)
 	http.HandleFunc("/attendPast", AttendAudiencePast)
 	http.HandleFunc("/attendPresent", AttendAudiencePresent)
 	http.HandleFunc("/attendFuture", AttendAudienceFuture)
