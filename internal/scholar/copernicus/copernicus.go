@@ -198,7 +198,8 @@ func getNextLink(copRes CopernicusResult) string {
 	return ""
 }
 
-func insertFeatures(db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
+func insertFeatures(id int, db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
+	log.Printf("scriv[%v]: writing %v features to db", id, len(feats))
 	for _, f := range feats {
 		if f.Geometry != nil {
 			handleDBInsert(db, p, c, f)
@@ -207,16 +208,17 @@ func insertFeatures(db order.DatabaseClient, p string, c string, feats []coperni
 }
 
 func searchUrl(id int, url string, provider string, collection string, scrivs chan scrivJob) {
-	log.Printf("worker[%v]: running search for link %s", id, url)
+	log.Printf("seeker[%v]: running search for link %s", id, url)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Print(err)
 		log.Print("Failed querying copernicus! Requeuing in 300s")
 		time.Sleep(time.Duration(300) * time.Second)
 		searchUrl(id, url, provider, collection, scrivs)
+		return
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 	var cr CopernicusResult
 	json.NewDecoder(resp.Body).Decode(&cr)
 	scrivs <- scrivJob{
@@ -271,9 +273,8 @@ func scriv(id int, scrivJobs <-chan scrivJob) {
 	if err != nil {
 		log.Fatal("Could not connect to DB!")
 	}
-
 	for j := range scrivJobs {
-		insertFeatures(db, j.provider, j.collection, j.features)
+		insertFeatures(id, db, j.provider, j.collection, j.features)
 	}
 }
 
@@ -298,7 +299,7 @@ func scanCollection(provider string, collection string) {
 		go scriv(w, scrivJobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2014, 1, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2019, 6, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
 		lastDayTime := d.AddDate(0, 0, -1)
