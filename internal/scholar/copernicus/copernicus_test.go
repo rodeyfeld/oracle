@@ -43,6 +43,6 @@ func TestInsertPostgres(t *testing.T) {
 	log.Print(of)
 	err = db.Insert("TestProvider", "TestCollection", of)
 	if err != nil {
-		log.Print("fck")
+		log.Print("something went wrong")
 	}
 }

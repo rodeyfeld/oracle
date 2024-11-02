@@ -206,33 +206,36 @@ func insertFeatures(db order.DatabaseClient, p string, c string, feats []coperni
 	}
 }
 
-func searchUrl(id int, db order.DatabaseClient, url string, provider string, collection string) {
+func searchUrl(id int, url string, provider string, collection string, scrivs chan scrivJob) {
 	log.Printf("worker[%v]: running search for link %s", id, url)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Print(err)
 		log.Print("Failed querying copernicus! Requeuing in 300s")
 		time.Sleep(time.Duration(300) * time.Second)
-		searchUrl(id, db, url, provider, collection)
+		searchUrl(id, url, provider, collection, scrivs)
 	}
 	defer resp.Body.Close()
 
-	var copRes CopernicusResult
-	json.NewDecoder(resp.Body).Decode(&copRes)
-	log.Print(copRes)
-	insertFeatures(db, provider, collection, copRes.Features)
-	url = getNextLink(copRes)
+	var cr CopernicusResult
+	json.NewDecoder(resp.Body).Decode(&cr)
+	scrivs <- scrivJob{
+		features:   cr.Features,
+		provider:   provider,
+		collection: collection,
+	}
+	url = getNextLink(cr)
 	if url != "" {
-		searchUrl(id, db, url, provider, collection)
+		searchUrl(id, url, provider, collection, scrivs)
 	}
 }
 
-func searchCollectionByDatetimeRange(id int, db order.DatabaseClient, provider string, collection string, dt1 time.Time, dt2 time.Time, link string) {
+func searchCollectionByDatetimeRange(id int, j seekerJob) {
 
-	dtRange := fmt.Sprintf("%s/%s", dt1.Format(time.RFC3339), dt2.Format(time.RFC3339))
+	dtRange := fmt.Sprintf("%s/%s", j.dt1.Format(time.RFC3339), j.dt2.Format(time.RFC3339))
 
 	reqData := CopernicusRequest{
-		Collections: collection,
+		Collections: j.collection,
 		Datetime:    dtRange,
 		Sortby:      "datetime",
 		Limit:       "500",
@@ -243,51 +246,72 @@ func searchCollectionByDatetimeRange(id int, db order.DatabaseClient, provider s
 	params.Set("datetime", reqData.Datetime)
 	params.Set("sortby", reqData.Sortby)
 	params.Set("limit", reqData.Limit)
-	url := fmt.Sprintf("%s?%s", link, params.Encode())
-	searchUrl(id, db, url, provider, collection)
+	url := fmt.Sprintf("%s?%s", j.url, params.Encode())
+	searchUrl(id, url, j.provider, j.collection, j.scrivs)
 }
 
-type workerJob struct {
+type scrivJob struct {
+	features   []copernicusFeature
+	provider   string
+	collection string
+}
+
+type seekerJob struct {
 	provider   string
 	collection string
 	dt1        time.Time
 	dt2        time.Time
 	url        string
+	scrivs     chan scrivJob
 }
 
-func worker(id int, jobs <-chan workerJob) {
+func scriv(id int, scrivJobs <-chan scrivJob) {
 	db := &order.PostgresDB{}
 	err := db.Connect()
 	if err != nil {
 		log.Fatal("Could not connect to DB!")
 	}
-	for j := range jobs {
-		searchCollectionByDatetimeRange(id, db, j.provider, j.collection, j.dt1, j.dt2, j.url)
+
+	for j := range scrivJobs {
+		insertFeatures(db, j.provider, j.collection, j.features)
 	}
-	defer db.Close()
+}
+
+func seeker(id int, seekerJobs <-chan seekerJob) {
+	for j := range seekerJobs {
+		searchCollectionByDatetimeRange(id, j)
+	}
 }
 
 func scanCollection(provider string, collection string) {
 
-	jobs := make(chan workerJob)
+	seekerJobs := make(chan seekerJob)
+	scrivJobs := make(chan scrivJob)
 
-	for w := 1; w <= 2; w++ {
-		go worker(w, jobs)
+	seekerWorkerCount := 128
+	for w := 1; w <= seekerWorkerCount; w++ {
+		go seeker(w, seekerJobs)
+	}
+
+	scrivWorkerCount := 16
+	for w := 1; w <= scrivWorkerCount; w++ {
+		go scriv(w, scrivJobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2014, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
 		lastDayTime := d.AddDate(0, 0, -1)
-		jobs <- workerJob{
+		seekerJobs <- seekerJob{
 			provider:   provider,
 			collection: collection,
 			dt1:        lastDayTime,
 			dt2:        d,
 			url:        search_url,
+			scrivs:     scrivJobs,
 		}
 	}
-	close(jobs)
+	close(seekerJobs)
 }
 
 func Teach() {
