@@ -40,7 +40,7 @@ type CopernicusResult struct {
 
 type copernicusFeature struct {
 	Id         string                      `json:"id" `
-	Geometry   *geojson.Feature            `json:"geometry" `
+	Geometry   *geojson.Geometry           `json:"geometry" `
 	Assets     copernicusFeatureAssets     `json:"assets" `
 	Properties copernicusFeatureProperties `json:"properties" `
 	Collection string                      `json:"collection" `
@@ -101,11 +101,11 @@ func RandCopernicusResult() CopernicusResult {
 
 func RandCopernicusFeature() copernicusFeature {
 	randomGeometry := chaos.RandomPolygon(4)
-	geoJson := chaos.PolygonToGeoJSON(randomGeometry)
+	gjson := geojson.NewGeometry(randomGeometry)
 
 	return copernicusFeature{
 		Id:         chaos.UUID(),
-		Geometry:   geoJson,
+		Geometry:   gjson,
 		Assets:     randFeatureAssets(),
 		Properties: randFeatureProperties(),
 		Collection: "SENTINEL-1",
@@ -162,7 +162,7 @@ func getToken() string {
 func handleDBInsert(db order.DatabaseClient, p string, c string, cf copernicusFeature) error {
 	f := order.Feature{
 		Id:         cf.Id,
-		Geometry:   cf.Geometry.Geometry,
+		Geometry:   cf.Geometry.Geometry(),
 		StartDate:  cf.Properties.StartDatetime,
 		EndDate:    cf.Properties.EndDatetime,
 		SensorType: cf.Properties.InstrumentShortName,
@@ -200,7 +200,9 @@ func getNextLink(copRes CopernicusResult) string {
 
 func insertFeatures(db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
 	for _, f := range feats {
-		handleDBInsert(db, p, c, f)
+		if f.Geometry != nil {
+			handleDBInsert(db, p, c, f)
+		}
 	}
 }
 
@@ -209,13 +211,15 @@ func searchUrl(id int, db order.DatabaseClient, url string, provider string, col
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Print(err)
-		log.Panicf("Failed querying copernicus!")
+		log.Print("Failed querying copernicus! Requeuing in 300s")
+		time.Sleep(time.Duration(300) * time.Second)
+		searchUrl(id, db, url, provider, collection)
 	}
 	defer resp.Body.Close()
 
 	var copRes CopernicusResult
 	json.NewDecoder(resp.Body).Decode(&copRes)
-
+	log.Print(copRes)
 	insertFeatures(db, provider, collection, copRes.Features)
 	url = getNextLink(copRes)
 	if url != "" {
@@ -267,7 +271,7 @@ func scanCollection(provider string, collection string) {
 
 	jobs := make(chan workerJob)
 
-	for w := 1; w <= 96; w++ {
+	for w := 1; w <= 2; w++ {
 		go worker(w, jobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"

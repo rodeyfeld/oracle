@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -127,6 +128,7 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 
 		);
 	`
+	log.Print(f.Geometry)
 	args := pgx.NamedArgs{
 		"external_id": f.Id,
 		"provider":    p,

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/paulmach/orb"
-	"github.com/paulmach/orb/geojson"
 	"github.com/rodeyfeld/oracle/order"
 )
 
@@ -121,8 +120,4 @@ func RandomPolygon(numPoints int) orb.Polygon {
 	outerRing = append(outerRing, outerRing[0])
 	points = append(points, outerRing)
 	return orb.Polygon(points)
-}
-
-func PolygonToGeoJSON(polygon orb.Polygon) *geojson.Feature {
-	return geojson.NewFeature(polygon)
 }

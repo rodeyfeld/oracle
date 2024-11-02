@@ -17,9 +17,10 @@ func TestInsertPostgres(t *testing.T) {
 	db := &order.PostgresDB{}
 	db.Connect()
 	cf := RandCopernicusFeature()
+	log.Print(cf)
 	of := order.Feature{
 		Id:         cf.Id,
-		Geometry:   cf.Geometry.Geometry,
+		Geometry:   cf.Geometry.Geometry(),
 		StartDate:  cf.Properties.StartDatetime,
 		EndDate:    cf.Properties.EndDatetime,
 		SensorType: cf.Properties.InstrumentShortName,
@@ -39,6 +40,7 @@ func TestInsertPostgres(t *testing.T) {
 			CloudCoverPct:  cf.Properties.CloudCover,
 		},
 	}
+	log.Print(of)
 	err = db.Insert("TestProvider", "TestCollection", of)
 	if err != nil {
 		log.Print("fck")
