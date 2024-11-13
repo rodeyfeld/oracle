@@ -99,7 +99,7 @@ type PostgresDB struct {
 func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 
 	query := `
-		INSERT INTO augury_archiveitem
+		INSERT INTO archive_finder_archiveitem
 		(
 			created,
 			modified,
@@ -107,7 +107,7 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 			provider,
 			geometry,
 			collection,
-			sensor_type,
+			sensor,
 			thumbnail,
 			start_date,
 			end_date,

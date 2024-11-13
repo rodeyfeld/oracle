@@ -133,8 +133,8 @@ func getToken() string {
 
 	data := url.Values{}
 	data.Set("client_id", "cdse-public")
-	data.Set("username", "eric.d.rodefeld@gmail.com")
-	data.Set("password", "294d1f61294d1f61!@#AZDSFG")
+	data.Set("username", "<email>")
+	data.Set("password", "<password>")
 	data.Set("grant_type", "password")
 
 	ct := "application/x-www-form-urlencoded"
@@ -182,7 +182,6 @@ func handleDBInsert(db order.DatabaseClient, p string, c string, cf copernicusFe
 			CloudCoverPct:  cf.Properties.CloudCover,
 		},
 	}
-
 	if err := db.Insert(p, c, f); err != nil {
 		return err
 	}
@@ -289,17 +288,17 @@ func scanCollection(provider string, collection string) {
 	seekerJobs := make(chan seekerJob)
 	scrivJobs := make(chan scrivJob)
 
-	seekerWorkerCount := 128
+	seekerWorkerCount := 32
 	for w := 1; w <= seekerWorkerCount; w++ {
 		go seeker(w, seekerJobs)
 	}
 
-	scrivWorkerCount := 16
+	scrivWorkerCount := 4
 	for w := 1; w <= scrivWorkerCount; w++ {
 		go scriv(w, scrivJobs)
 	}
 	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
-	initialTime := time.Date(2019, 6, 1, 0, 0, 0, 0, time.UTC)
+	initialTime := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
 	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
 		lastDayTime := d.AddDate(0, 0, -1)
