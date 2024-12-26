@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/paulmach/orb"
-	"github.com/rodeyfeld/oracle/order"
+	"oracle/internal/order"
 )
 
 const minimumFutureSeconds int = 120

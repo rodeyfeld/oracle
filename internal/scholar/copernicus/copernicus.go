@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/paulmach/orb/geojson"
-	"github.com/rodeyfeld/oracle/chaos"
-	"github.com/rodeyfeld/oracle/order"
+	"oracle/internal/chaos"
+	"oracle/internal/order"
 )
 
 type copernicusAuth struct {

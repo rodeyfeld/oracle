@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/rodeyfeld/oracle/chaos"
-	"github.com/rodeyfeld/oracle/copernicus"
-	"github.com/rodeyfeld/oracle/order"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"oracle/internal/chaos"
+	"oracle/internal/order"
+	"oracle/internal/scholar/copernicus"
 )
 
 type ProviderCollection struct {
