@@ -1,13 +1,15 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.23 AS builder
+WORKDIR /oracle
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN apk update && apk add bash
-EXPOSE 7777
-EXPOSE 27017
+COPY . . 
 
-RUN mkdir /app
-COPY . /app
-
-WORKDIR /app
+WORKDIR /oracle/cmd
+RUN go build -o /oracle/app-binary
 
 
-CMD ["go", "run", "."]
+FROM debian:bookworm-slim AS runner
+WORKDIR /oracle
+COPY --from=builder /oracle/app-binary .
+ENTRYPOINT ["/app/app-binary"]

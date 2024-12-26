@@ -16,7 +16,7 @@ func Start() {
 	// Env handling
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Error loading .env file")
 	}
 	debugModeStr := os.Getenv("DEBUG_MODE")
 

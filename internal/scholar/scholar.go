@@ -185,7 +185,7 @@ func Enscribe() string {
 	log.SetPrefix("scholar: [Enscribe] ")
 	// Create a random ID for this request
 	id := chaos.UUID()
-	log.Printf("[_|%s]: Learning from teachers ", id)
+	log.Printf("[_|%s]: Scraping from providers", id)
 	copernicus.Teach()
 	return id
 }
