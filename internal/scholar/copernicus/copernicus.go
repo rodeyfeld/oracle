@@ -317,7 +317,7 @@ func scanCollection(provider string, collection string) {
 func Teach() {
 	log.SetPrefix("copernicus: [Teach] ")
 	collections := []string{
-		"SENTINEL-1",
+		// "SENTINEL-1",
 		"SENTINEL-2",
 	}
 	for _, c := range collections {
