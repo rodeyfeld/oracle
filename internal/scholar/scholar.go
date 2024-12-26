@@ -181,24 +181,6 @@ func RandArchiveResults(afi int) ArchiveResults {
 	}
 }
 
-func Study(areq ArchiveRequest) ArchiveResults {
-	log.SetPrefix("scholar: [Study] ")
-	// Create a random ID for this request
-	id := chaos.UUID()
-	log.Printf("[%v|%s]: Studying for request", areq.ArchiveFinderId, id)
-	ars := RandArchiveResults(areq.ArchiveFinderId)
-	return ars
-}
-
-func Recite(areq ArchiveRequest) ArchiveResults {
-	log.SetPrefix("scholar: [Recite] ")
-	// Create a random ID for this request
-	id := chaos.UUID()
-	log.Printf("[%v|%s]: Reciting for request", areq.ArchiveFinderId, id)
-	ars := getDBResults(areq, id)
-	return ars
-}
-
 func Enscribe() string {
 	log.SetPrefix("scholar: [Enscribe] ")
 	// Create a random ID for this request

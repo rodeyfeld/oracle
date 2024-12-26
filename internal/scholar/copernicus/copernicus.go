@@ -288,12 +288,12 @@ func scanCollection(provider string, collection string) {
 	seekerJobs := make(chan seekerJob)
 	scrivJobs := make(chan scrivJob)
 
-	seekerWorkerCount := 32
+	seekerWorkerCount := 4
 	for w := 1; w <= seekerWorkerCount; w++ {
 		go seeker(w, seekerJobs)
 	}
 
-	scrivWorkerCount := 4
+	scrivWorkerCount := 1
 	for w := 1; w <= scrivWorkerCount; w++ {
 		go scriv(w, scrivJobs)
 	}
@@ -317,7 +317,7 @@ func scanCollection(provider string, collection string) {
 func Teach() {
 	log.SetPrefix("copernicus: [Teach] ")
 	collections := []string{
-		// "SENTINEL-1",
+		"SENTINEL-1",
 		"SENTINEL-2",
 	}
 	for _, c := range collections {
