@@ -10,6 +10,8 @@ RUN go build -o /oracle/app-binary
 
 
 FROM debian:bookworm-slim AS runner
+RUN apt-get update && apt-get install -y ca-certificates
+
 WORKDIR /oracle
 COPY --from=builder /oracle/app-binary .
-ENTRYPOINT ["/app/app-binary"]
+ENTRYPOINT ["/oracle/app-binary"]
