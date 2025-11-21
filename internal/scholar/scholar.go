@@ -28,12 +28,12 @@ type Catalog struct {
 
 type ArchiveResults struct {
 	Id              string    `json:"id" bson:"id" `
-	ArchiveFinderId int       `json:"archive_finder_id" bson:"archive_finder_id" `
+	ImageryFinderId int       `json:"imagery_finder_id" bson:"imagery_finder_id" `
 	Catalogs        []Catalog `json:"catalogs" bson:"catalogs" `
 }
 
 type ArchiveRequest struct {
-	ArchiveFinderId int       `json:"archive_finder_id" bson:"archive_finder_id" `
+	ImageryFinderId int       `json:"imagery_finder_id" bson:"imagery_finder_id" `
 	StartDate       time.Time `json:"start_date" bson:"start_date" `
 	EndDate         time.Time `json:"end_date" bson:"end_date" `
 	Geometry        string    `json:"geometry" bson:"geometry" `
@@ -117,10 +117,10 @@ func queryProviderCatalogs(client *mongo.Client, areq ArchiveRequest) []Catalog 
 
 func getDBResults(areq ArchiveRequest, id string) ArchiveResults {
 	client := ConnectMongo()
-	log.Printf("[%v|%s]: Getting database results for run", areq.ArchiveFinderId, id)
+	log.Printf("[%v|%s]: Getting database results for run", areq.ImageryFinderId, id)
 	ars := ArchiveResults{
 		Id:              id,
-		ArchiveFinderId: areq.ArchiveFinderId,
+		ImageryFinderId: areq.ImageryFinderId,
 		Catalogs:        queryProviderCatalogs(client, areq),
 	}
 	client.Disconnect(context.Background())
@@ -170,13 +170,13 @@ func randCatalog() Catalog {
 
 }
 
-func RandArchiveResults(afi int) ArchiveResults {
+func RandArchiveResults(ifi int) ArchiveResults {
 	cs := make([]Catalog, 2)
 	cs[0] = randCatalog()
 	cs[1] = randCatalog()
 	return ArchiveResults{
 		Id:              chaos.UUID(),
-		ArchiveFinderId: afi,
+		ImageryFinderId: ifi,
 		Catalogs:        cs,
 	}
 }
