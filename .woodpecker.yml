@@ -13,7 +13,7 @@ variables:
 
 steps:
   build:
-    image: woodpeckerci/plugin-docker
+    image: woodpeckerci/plugin-docker-buildx
     settings:
       repo: edrodefeld/oracle
       auto_tag: true
