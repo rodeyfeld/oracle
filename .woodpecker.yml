@@ -1,0 +1,39 @@
+variables:
+  - &docker_creds
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+
+  - &deploy_creds
+    image: bitnami/kubectl
+    environment:
+      KUBECONFIG_BASE64:
+        from_secret: kubeconfig
+
+steps:
+  build:
+    image: woodpeckerci/plugin-docker
+    settings:
+      repo: edrodefeld/oracle
+      auto_tag: true
+      <<: *docker_creds
+    when:
+      - event: push
+        branch: main
+
+  deploy:
+    <<: *deploy_creds
+    commands:
+      - echo $KUBECONFIG_BASE64 | base64 -d > /tmp/kubeconfig
+      # Oracle is a Job, so we delete the old one and apply the new one
+      # Note: You'll need to ensure the Job manifest is available or define it inline here if not in repo
+      # Assuming mirage/jobs/oracle.yml exists in THIS repo or we just skip deploy for now if it's managed by cron
+      - kubectl --kubeconfig=/tmp/kubeconfig delete job oracle -n galaxy || true
+      # Only works if the manifest is inside THIS repo (oracle), otherwise you might need a different strategy
+      # For now, I'll leave the apply commented out unless you copy the job file into this repo
+      # - kubectl --kubeconfig=/tmp/kubeconfig apply -f jobs/oracle.yml
+    when:
+      - event: push
+        branch: main
+
