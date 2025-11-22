@@ -19,7 +19,7 @@ steps:
       auto_tag: true
       <<: *docker_creds
     when:
-      - event: push
+      - event: [push, manual]
         branch: main
 
   deploy:
@@ -34,6 +34,5 @@ steps:
       # For now, I'll leave the apply commented out unless you copy the job file into this repo
       # - kubectl --kubeconfig=/tmp/kubeconfig apply -f jobs/oracle.yml
     when:
-      - event: push
+      - event: [push, manual]
         branch: main
-
