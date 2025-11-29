@@ -344,9 +344,9 @@ func Teach() {
 	// Collection IDs for STAC v1 API
 	// See: https://stac.dataspace.copernicus.eu/v1/collections
 	collections := []string{
-		"sentinel-1-grd",  // SAR Ground Range Detected
-		"sentinel-2-l1c",  // Optical L1C (top-of-atmosphere)
-		"sentinel-2-l2a",  // Optical L2A (surface reflectance)
+		"sentinel-1-grd", // SAR Ground Range Detected
+		"sentinel-2-l1c", // Optical L1C (top-of-atmosphere)
+		"sentinel-2-l2a", // Optical L2A (surface reflectance)
 	}
 	for _, c := range collections {
 		scanCollection(ProviderName, c)
