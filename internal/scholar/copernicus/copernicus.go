@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paulmach/orb/geojson"
 	"oracle/internal/chaos"
 	"oracle/internal/order"
+
+	"github.com/paulmach/orb/geojson"
 )
 
 type copernicusAuth struct {
@@ -198,42 +199,55 @@ func getNextLink(copRes CopernicusResult) string {
 }
 
 func insertFeatures(id int, db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
-	log.Printf("scriv[%v]: writing %v features to db", id, len(feats))
+	inserted := 0
+	skipped := 0
 	for _, f := range feats {
 		if f.Geometry != nil {
-			handleDBInsert(db, p, c, f)
+			err := handleDBInsert(db, p, c, f)
+			if err != nil {
+				skipped++
+			} else {
+				inserted++
+			}
+		} else {
+			skipped++
 		}
 	}
+	log.Printf("scriv[%d]: %s +%d inserted, %d skipped", id, c, inserted, skipped)
 }
 
-func searchUrl(id int, url string, provider string, collection string, scrivs chan scrivJob) {
-	log.Printf("seeker[%v]: running search for link %s", id, url)
+func searchUrl(id int, url string, provider string, collection string, dateLabel string, scrivs chan scrivJob, page int) {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Print(err)
-		log.Print("Failed querying copernicus! Requeuing in 300s")
+		log.Printf("seeker[%d]: %s [%s] ERROR %v - retrying in 300s", id, collection, dateLabel, err)
 		time.Sleep(time.Duration(300) * time.Second)
-		searchUrl(id, url, provider, collection, scrivs)
+		searchUrl(id, url, provider, collection, dateLabel, scrivs, page)
 		return
 	}
 
 	defer resp.Body.Close()
 	var cr CopernicusResult
 	json.NewDecoder(resp.Body).Decode(&cr)
+
+	log.Printf("seeker[%d]: %s [%s] page %d -> %d features", id, collection, dateLabel, page, len(cr.Features))
+
 	scrivs <- scrivJob{
 		features:   cr.Features,
 		provider:   provider,
 		collection: collection,
 	}
-	url = getNextLink(cr)
-	if url != "" {
-		searchUrl(id, url, provider, collection, scrivs)
+	nextUrl := getNextLink(cr)
+	if nextUrl != "" {
+		searchUrl(id, nextUrl, provider, collection, dateLabel, scrivs, page+1)
+	} else {
+		log.Printf("seeker[%d]: %s [%s] complete (%d pages)", id, collection, dateLabel, page)
 	}
 }
 
 func searchCollectionByDatetimeRange(id int, j seekerJob) {
-
 	dtRange := fmt.Sprintf("%s/%s", j.dt1.Format(time.RFC3339), j.dt2.Format(time.RFC3339))
+	dateLabel := fmt.Sprintf("%s to %s", j.dt1.Format("2006-01-02"), j.dt2.Format("2006-01-02"))
+	log.Printf("seeker[%d]: %s [%s] starting", id, j.collection, dateLabel)
 
 	reqData := CopernicusRequest{
 		Collections: j.collection,
@@ -248,7 +262,7 @@ func searchCollectionByDatetimeRange(id int, j seekerJob) {
 	params.Set("sortby", reqData.Sortby)
 	params.Set("limit", reqData.Limit)
 	url := fmt.Sprintf("%s?%s", j.url, params.Encode())
-	searchUrl(id, url, j.provider, j.collection, j.scrivs)
+	searchUrl(id, url, j.provider, j.collection, dateLabel, j.scrivs, 1)
 }
 
 type scrivJob struct {
@@ -270,11 +284,13 @@ func scriv(id int, scrivJobs <-chan scrivJob) {
 	db := &order.PostgresDB{}
 	err := db.Connect()
 	if err != nil {
-		log.Fatal("Could not connect to DB!")
+		log.Fatalf("scriv[%d]: failed to connect to DB: %v", id, err)
 	}
+	log.Printf("scriv[%d]: connected to database", id)
 	for j := range scrivJobs {
 		insertFeatures(id, db, j.provider, j.collection, j.features)
 	}
+	log.Printf("scriv[%d]: shutting down", id)
 }
 
 func seeker(id int, seekerJobs <-chan seekerJob) {
@@ -284,41 +300,53 @@ func seeker(id int, seekerJobs <-chan seekerJob) {
 }
 
 func scanCollection(provider string, collection string) {
-
 	seekerJobs := make(chan seekerJob)
 	scrivJobs := make(chan scrivJob)
 
-	seekerWorkerCount := 4
+	seekerWorkerCount := 4 // Copernicus: 4 concurrent connections, 2000 req/min
 	for w := 1; w <= seekerWorkerCount; w++ {
 		go seeker(w, seekerJobs)
 	}
 
-	scrivWorkerCount := 1
+	scrivWorkerCount := 4 // DB writers are local
 	for w := 1; w <= scrivWorkerCount; w++ {
 		go scriv(w, scrivJobs)
 	}
-	search_url := "https://catalogue.dataspace.copernicus.eu/stac/search"
+
+	search_url := "https://stac.dataspace.copernicus.eu/v1/search"
 	initialTime := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	endTime := time.Now().UTC()
-	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 0, 1) {
-		lastDayTime := d.AddDate(0, 0, -1)
+
+	// Count months
+	months := 0
+	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
+		months++
+	}
+	log.Printf("=== SCAN %s: %d months (%s to %s) ===", collection, months, initialTime.Format("2006-01"), endTime.Format("2006-01"))
+
+	// Use monthly intervals - STAC pagination handles the rest
+	for d := initialTime; !d.After(endTime); d = d.AddDate(0, 1, 0) {
 		seekerJobs <- seekerJob{
 			provider:   provider,
 			collection: collection,
-			dt1:        lastDayTime,
-			dt2:        d,
+			dt1:        d,
+			dt2:        d.AddDate(0, 1, 0),
 			url:        search_url,
 			scrivs:     scrivJobs,
 		}
 	}
 	close(seekerJobs)
+	log.Printf("=== SCAN %s: all jobs queued ===", collection)
 }
 
 func Teach() {
 	log.SetPrefix("copernicus: [Teach] ")
+	// Collection IDs for STAC v1 API
+	// See: https://stac.dataspace.copernicus.eu/v1/collections
 	collections := []string{
-		"SENTINEL-1",
-		"SENTINEL-2",
+		"sentinel-1-grd",  // SAR Ground Range Detected
+		"sentinel-2-l1c",  // Optical L1C (top-of-atmosphere)
+		"sentinel-2-l2a",  // Optical L2A (surface reflectance)
 	}
 	for _, c := range collections {
 		scanCollection(ProviderName, c)

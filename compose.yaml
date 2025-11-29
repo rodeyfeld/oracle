@@ -2,11 +2,14 @@ services:
   web: 
     build:
       context: .
-      target: builder
+      target: runner
     ports: 
       - '7777:7777'
+    env_file:
+      - .env
     networks: # Networks to join (Services on the same network can communicate with each other using their name)
       - oraclenet
+      - augur-net
 
   mongo:
     image: mongo
@@ -41,4 +44,6 @@ volumes:
 networks:
   oraclenet:   
     driver: bridge
+  augur-net:
+    external: true
     

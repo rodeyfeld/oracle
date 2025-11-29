@@ -96,7 +96,23 @@ type PostgresDB struct {
 	client *pgx.Conn
 }
 
+func (db *PostgresDB) ExistsByExternalId(externalId string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM archive_finder_archiveitem WHERE external_id = @external_id)`
+	args := pgx.NamedArgs{"external_id": externalId}
+	var exists bool
+	err := db.client.QueryRow(context.Background(), query, args).Scan(&exists)
+	return exists, err
+}
+
 func (db *PostgresDB) Insert(p string, c string, f Feature) error {
+	// Check if item already exists
+	exists, err := db.ExistsByExternalId(f.Id)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil // Skip duplicate
+	}
 
 	query := `
 		INSERT INTO archive_finder_archiveitem
@@ -139,7 +155,7 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 		"end_date":    f.EndDate,
 		"metadata":    "",
 	}
-	_, err := db.client.Exec(context.Background(), query, args)
+	_, err = db.client.Exec(context.Background(), query, args)
 	return err
 }
 
