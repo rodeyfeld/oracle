@@ -48,37 +48,32 @@ type copernicusFeature struct {
 }
 
 type copernicusFeatureAssets struct {
-	Product   product   `json:"PRODUCT" `
-	Quicklook quicklook `json:"QUICKLOOK" `
+	Product      assetItem `json:"Product"` // Sentinel-1 GRD, Sentinel-2
+	ProductLower assetItem `json:"product"` // Sentinel-1 SLC, Sentinel-3, Sentinel-6, CCM
+	Thumbnail    assetItem `json:"thumbnail"`
 }
 
-type product struct {
-	Href string `json:"href" `
-	Type string `json:"type"`
+// GetProduct returns the product asset, handling both "Product" and "product" keys
+func (a copernicusFeatureAssets) GetProduct() assetItem {
+	if a.Product.Href != "" {
+		return a.Product
+	}
+	return a.ProductLower
 }
-type quicklook struct {
-	Href string `json:"href" `
+
+type assetItem struct {
+	Href string `json:"href"`
 	Type string `json:"type"`
 }
 
 type copernicusFeatureProperties struct {
-	Origin                   string    `json:"origin"`                   //: "CLOUDFERRO",
-	TileId                   string    `json:"tileId"`                   //: "33SXA",
-	CloudCover               float32   `json:"cloudCover"`               //: 0,
-	OrbitNumber              int       `json:"orbitNumber"`              //: 319,
-	OrbitDirection           string    `json:"orbitDirection"`           //: "DESCENDING",
-	ProductGroupId           string    `json:"productGroupId"`           //: "GS2A_20150715T094306_000319_N02.04",
-	ProcessingLevel          string    `json:"processingLevel"`          //: "S2MSI2A",
-	ProcessorVersion         string    `json:"processorVersion"`         //: "02.05",
-	PlatformShortName        string    `json:"platformShortName"`        //: "SENTINEL-2",
-	InstrumentShortName      string    `json:"instrumentShortName"`      //: "MSI",
-	RelativeOrbitNumber      int       `json:"relativeOrbitNumber"`      //: 36,
-	PlatformSerialIdentifier string    `json:"platformSerialIdentifier"` //: "A",
-	Datetime                 time.Time `json:"datetime"`                 //: "2015-07-15T09:43:06.029000Z",
-	EndDatetime              time.Time `json:"end_datetime"`             //: "2015-07-15T09:43:06.029000Z",
-	StartDatetime            time.Time `json:"start_datetime"`           //: "2015-07-15T09:43:06.029000Z",
-	ProductType              string    `json:"productType"`              //: "S2MSI2A"
-
+	Datetime      time.Time `json:"datetime"`       // "2025-11-29T15:11:41.469192Z"
+	StartDatetime time.Time `json:"start_datetime"` // "2025-11-29T15:11:41.469192Z"
+	EndDatetime   time.Time `json:"end_datetime"`   // "2025-11-29T15:12:08.784978Z"
+	Platform      string    `json:"platform"`       // "sentinel-1a"
+	Instruments   []string  `json:"instruments"`    // ["sar"]
+	Constellation string    `json:"constellation"`  // "sentinel-1"
+	ProductType   string    `json:"product:type"`   // "IW_GRDH_1S"
 }
 
 type copernicusLink struct {
@@ -116,9 +111,12 @@ func RandCopernicusFeature() copernicusFeature {
 func randFeatureProperties() copernicusFeatureProperties {
 	pastTime := chaos.PastTime(time.Now())
 	return copernicusFeatureProperties{
-		Datetime:            pastTime,
-		PlatformShortName:   "SENTINEL-1",
-		InstrumentShortName: "SAR",
+		Datetime:      pastTime,
+		StartDatetime: pastTime,
+		EndDatetime:   pastTime,
+		Platform:      "sentinel-1a",
+		Instruments:   []string{"sar"},
+		Constellation: "sentinel-1",
 	}
 }
 
@@ -126,7 +124,8 @@ func randFeatureAssets() copernicusFeatureAssets {
 	href := strings.Join([]string{"https:/fakelink.eu/odata/v1/Products", chaos.UUID()}, "")
 
 	return copernicusFeatureAssets{
-		Product: product{Href: href},
+		Product:   assetItem{Href: href},
+		Thumbnail: assetItem{Href: href + "/thumbnail.png"},
 	}
 }
 
@@ -161,26 +160,35 @@ func getToken() string {
 }
 
 func handleDBInsert(db order.DatabaseClient, p string, c string, cf copernicusFeature) error {
+	// Get first instrument from array, default to empty
+	instrument := ""
+	if len(cf.Properties.Instruments) > 0 {
+		instrument = cf.Properties.Instruments[0]
+	}
+
+	// Get product asset (handles both "Product" and "product" keys)
+	product := cf.Assets.GetProduct()
+
 	f := order.Feature{
 		Id:         cf.Id,
 		Geometry:   cf.Geometry.Geometry(),
 		StartDate:  cf.Properties.StartDatetime,
 		EndDate:    cf.Properties.EndDatetime,
-		SensorType: cf.Properties.InstrumentShortName,
+		SensorType: instrument,
 		Collection: cf.Collection,
 		Assets: order.FeatureAssets{
 			Product: order.Product{
-				Href: cf.Assets.Product.Href,
-				Type: cf.Assets.Product.Type,
+				Href: product.Href,
+				Type: product.Type,
 			},
 			Thumbnail: order.Thumbnail{
-				Href: cf.Assets.Quicklook.Href,
-				Type: cf.Assets.Quicklook.Type,
+				Href: cf.Assets.Thumbnail.Href,
+				Type: cf.Assets.Thumbnail.Type,
 			},
 		},
 		Properties: order.FeatureProperties{
-			InstrumentName: cf.Properties.PlatformShortName,
-			CloudCoverPct:  cf.Properties.CloudCover,
+			InstrumentName: cf.Properties.Platform,
+			CloudCoverPct:  0, // Not available in new API at top level
 		},
 	}
 	if err := db.Insert(p, c, f); err != nil {
@@ -344,9 +352,34 @@ func Teach() {
 	// Collection IDs for STAC v1 API
 	// See: https://stac.dataspace.copernicus.eu/v1/collections
 	collections := []string{
-		"sentinel-1-grd", // SAR Ground Range Detected
-		"sentinel-2-l1c", // Optical L1C (top-of-atmosphere)
-		"sentinel-2-l2a", // Optical L2A (surface reflectance)
+		// Sentinel-1 (SAR)
+		"sentinel-1-grd", // Ground Range Detected
+		"sentinel-1-slc", // Single Look Complex
+
+		// Sentinel-2 (Optical)
+		"sentinel-2-l1c", // Top-of-atmosphere reflectance
+		"sentinel-2-l2a", // Surface reflectance (atmospherically corrected)
+
+		// Sentinel-3 OLCI (Ocean and Land Color Instrument)
+		"sentinel-3-olci-1-efr-ntc", // Level-1 Full Resolution
+		"sentinel-3-olci-2-wfr-ntc", // Level-2 Water Full Resolution
+		"sentinel-3-olci-2-lfr-ntc", // Level-2 Land Full Resolution
+
+		// Sentinel-3 SLSTR (Sea and Land Surface Temperature Radiometer)
+		"sentinel-3-sl-2-lst-ntc", // Land Surface Temperature
+		"sentinel-3-sl-2-wst-ntc", // Water Surface Temperature
+		"sentinel-3-sl-2-frp-ntc", // Fire Radiative Power
+
+		// Sentinel-3 Altimetry (SRAL)
+		"sentinel-3-sr-2-lan-ntc", // Land Altimetry
+		"sentinel-3-sr-2-wat-ntc", // Water Altimetry
+
+		// Sentinel-6 (Ocean Altimetry)
+		"sentinel-6-p4-2-ntc", // Poseidon-4 Level-2
+
+		// Copernicus Contributing Missions (CCM)
+		"ccm-optical", // Pleiades, SPOT, VHR optical imagery
+		"ccm-sar",     // TerraSAR-X, PAZ SAR imagery
 	}
 	for _, c := range collections {
 		scanCollection(ProviderName, c)
