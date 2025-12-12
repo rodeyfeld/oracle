@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"oracle/internal/chaos"
@@ -209,26 +210,39 @@ func getNextLink(copRes CopernicusResult) string {
 func insertFeatures(id int, db order.DatabaseClient, p string, c string, feats []copernicusFeature) {
 	inserted := 0
 	skipped := 0
+	nilGeom := 0
+	var lastErr error
 	for _, f := range feats {
 		if f.Geometry != nil {
 			err := handleDBInsert(db, p, c, f)
 			if err != nil {
 				skipped++
+				lastErr = err
 			} else {
 				inserted++
 			}
 		} else {
+			nilGeom++
 			skipped++
 		}
 	}
-	log.Printf("scriv[%d]: %s +%d inserted, %d skipped", id, c, inserted, skipped)
+	if lastErr != nil {
+		log.Printf("scriv[%d]: %s +%d inserted, %d skipped (%d nil geom) - last error: %v", id, c, inserted, skipped, nilGeom, lastErr)
+	} else {
+		log.Printf("scriv[%d]: %s +%d inserted, %d skipped (%d nil geom)", id, c, inserted, skipped, nilGeom)
+	}
+}
+
+// HTTP client with timeout to prevent hung requests
+var httpClient = &http.Client{
+	Timeout: 60 * time.Second,
 }
 
 func searchUrl(id int, url string, provider string, collection string, dateLabel string, scrivs chan scrivJob, page int) {
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
-		log.Printf("seeker[%d]: %s [%s] ERROR %v - retrying in 300s", id, collection, dateLabel, err)
-		time.Sleep(time.Duration(300) * time.Second)
+		log.Printf("seeker[%d]: %s [%s] ERROR %v - retrying in 60s", id, collection, dateLabel, err)
+		time.Sleep(60 * time.Second)
 		searchUrl(id, url, provider, collection, dateLabel, scrivs, page)
 		return
 	}
@@ -288,7 +302,8 @@ type seekerJob struct {
 	scrivs     chan scrivJob
 }
 
-func scriv(id int, scrivJobs <-chan scrivJob) {
+func scriv(id int, scrivJobs <-chan scrivJob, wg *sync.WaitGroup) {
+	defer wg.Done()
 	db := &order.PostgresDB{}
 	err := db.Connect()
 	if err != nil {
@@ -301,24 +316,31 @@ func scriv(id int, scrivJobs <-chan scrivJob) {
 	log.Printf("scriv[%d]: shutting down", id)
 }
 
-func seeker(id int, seekerJobs <-chan seekerJob) {
+func seeker(id int, seekerJobs <-chan seekerJob, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for j := range seekerJobs {
 		searchCollectionByDatetimeRange(id, j)
 	}
+	log.Printf("seeker[%d]: shutting down", id)
 }
 
 func scanCollection(provider string, collection string) {
 	seekerJobs := make(chan seekerJob)
-	scrivJobs := make(chan scrivJob)
+	scrivJobs := make(chan scrivJob, 100) // Buffered to prevent blocking
+
+	var seekerWg sync.WaitGroup
+	var scrivWg sync.WaitGroup
 
 	seekerWorkerCount := 4 // Copernicus: 4 concurrent connections, 2000 req/min
 	for w := 1; w <= seekerWorkerCount; w++ {
-		go seeker(w, seekerJobs)
+		seekerWg.Add(1)
+		go seeker(w, seekerJobs, &seekerWg)
 	}
 
 	scrivWorkerCount := 4 // DB writers are local
 	for w := 1; w <= scrivWorkerCount; w++ {
-		go scriv(w, scrivJobs)
+		scrivWg.Add(1)
+		go scriv(w, scrivJobs, &scrivWg)
 	}
 
 	search_url := "https://stac.dataspace.copernicus.eu/v1/search"
@@ -344,7 +366,18 @@ func scanCollection(provider string, collection string) {
 		}
 	}
 	close(seekerJobs)
-	log.Printf("=== SCAN %s: all jobs queued ===", collection)
+	log.Printf("=== SCAN %s: all seeker jobs queued, waiting for seekers... ===", collection)
+
+	// Wait for all seekers to finish fetching
+	seekerWg.Wait()
+	log.Printf("=== SCAN %s: all seekers done, closing scriv channel... ===", collection)
+
+	// Now safe to close scrivJobs - all seekers have finished sending
+	close(scrivJobs)
+
+	// Wait for all scrivs to finish inserting
+	scrivWg.Wait()
+	log.Printf("=== SCAN %s: COMPLETE ===", collection)
 }
 
 func Teach() {

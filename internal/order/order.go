@@ -97,7 +97,7 @@ type PostgresDB struct {
 }
 
 func (db *PostgresDB) ExistsByExternalId(externalId string) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM archive_finder_archiveitem WHERE external_id = @external_id)`
+	query := `SELECT EXISTS(SELECT 1 FROM imagery_finder_archiveitem WHERE external_id = @external_id)`
 	args := pgx.NamedArgs{"external_id": externalId}
 	var exists bool
 	err := db.client.QueryRow(context.Background(), query, args).Scan(&exists)
@@ -115,7 +115,7 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 	}
 
 	query := `
-		INSERT INTO archive_finder_archiveitem
+		INSERT INTO imagery_finder_archiveitem
 		(
 			created,
 			modified,
@@ -134,14 +134,13 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 			CURRENT_TIMESTAMP,
 			@external_id,
 			@provider,
-			ST_GeomFromText(@geometry),
+			ST_GeomFromText(@geometry, 4326),
 			@collection,
 			@sensor_type,
 			@thumbnail,
 			@start_date,
 			@end_date,
 			@metadata
-
 		);
 	`
 	args := pgx.NamedArgs{
@@ -160,7 +159,6 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 }
 
 func (db *PostgresDB) Connect() error {
-
 	uri := os.Getenv("POSTGRES_DB_URL")
 
 	conn, err := pgx.Connect(context.Background(), uri)
