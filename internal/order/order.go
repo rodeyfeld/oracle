@@ -96,24 +96,7 @@ type PostgresDB struct {
 	client *pgx.Conn
 }
 
-func (db *PostgresDB) ExistsByExternalId(externalId string) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM imagery_finder_archiveitem WHERE external_id = @external_id)`
-	args := pgx.NamedArgs{"external_id": externalId}
-	var exists bool
-	err := db.client.QueryRow(context.Background(), query, args).Scan(&exists)
-	return exists, err
-}
-
 func (db *PostgresDB) Insert(p string, c string, f Feature) error {
-	// Check if item already exists
-	exists, err := db.ExistsByExternalId(f.Id)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil // Skip duplicate
-	}
-
 	query := `
 		INSERT INTO imagery_finder_archiveitem
 		(
@@ -154,7 +137,7 @@ func (db *PostgresDB) Insert(p string, c string, f Feature) error {
 		"end_date":    f.EndDate,
 		"metadata":    "",
 	}
-	_, err = db.client.Exec(context.Background(), query, args)
+	_, err := db.client.Exec(context.Background(), query, args)
 	return err
 }
 
@@ -185,4 +168,47 @@ func (db *PostgresDB) QueryCollection(string) ([]string, error) {
 	// TODO Query collection names
 	// db.client.ListCollectionNames(context.Background(), bson.M{})
 	return nil, nil
+}
+
+// EnsureProvider creates a Provider if it doesn't exist, returns its ID
+func (db *PostgresDB) EnsureProvider(name string) (int, error) {
+	// Try to get existing provider
+	var id int
+	err := db.client.QueryRow(context.Background(),
+		`SELECT id FROM provider_provider WHERE name = $1`, name).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+
+	// Insert new provider (no unique constraint, so just insert)
+	err = db.client.QueryRow(context.Background(),
+		`INSERT INTO provider_provider (created, modified, name, is_active)
+		 VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $1, true)
+		 RETURNING id`, name).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// EnsureCollection creates a Collection if it doesn't exist, returns its ID
+func (db *PostgresDB) EnsureCollection(name string, providerID int) (int, error) {
+	// Try to get existing collection
+	var id int
+	err := db.client.QueryRow(context.Background(),
+		`SELECT id FROM provider_collection WHERE name = $1 AND provider_id = $2`,
+		name, providerID).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+
+	// Insert new collection (no unique constraint, so just insert)
+	err = db.client.QueryRow(context.Background(),
+		`INSERT INTO provider_collection (created, modified, name, provider_id)
+		 VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $1, $2)
+		 RETURNING id`, name, providerID).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }

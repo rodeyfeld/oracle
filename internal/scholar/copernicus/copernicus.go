@@ -382,38 +382,75 @@ func scanCollection(provider string, collection string) {
 
 func Teach() {
 	log.SetPrefix("copernicus: [Teach] ")
+
 	// Collection IDs for STAC v1 API
 	// See: https://stac.dataspace.copernicus.eu/v1/collections
 	collections := []string{
-		// Sentinel-1 (SAR)
+		// Sentinel-1 (SAR) - Core imagery
 		"sentinel-1-grd", // Ground Range Detected
-		"sentinel-1-slc", // Single Look Complex
+		"sentinel-1-slc", // Single Look Complex (IW, EW, SM)
 
-		// Sentinel-2 (Optical)
+		// Sentinel-2 (Optical) - Core imagery
 		"sentinel-2-l1c", // Top-of-atmosphere reflectance
 		"sentinel-2-l2a", // Surface reflectance (atmospherically corrected)
 
-		// Sentinel-3 OLCI (Ocean and Land Color Instrument)
+		// Sentinel-3 OLCI (Ocean and Land Color Instrument) - NTC only
 		"sentinel-3-olci-1-efr-ntc", // Level-1 Full Resolution
-		"sentinel-3-olci-2-wfr-ntc", // Level-2 Water Full Resolution
+		"sentinel-3-olci-1-err-ntc", // Level-1 Reduced Resolution
 		"sentinel-3-olci-2-lfr-ntc", // Level-2 Land Full Resolution
+		"sentinel-3-olci-2-lrr-ntc", // Level-2 Land Reduced Resolution
+		"sentinel-3-olci-2-wfr-ntc", // Level-2 Water Full Resolution
+		"sentinel-3-olci-2-wrr-ntc", // Level-2 Water Reduced Resolution
 
-		// Sentinel-3 SLSTR (Sea and Land Surface Temperature Radiometer)
+		// Sentinel-3 SLSTR (Sea and Land Surface Temperature Radiometer) - NTC only
+		"sentinel-3-sl-1-rbt-ntc", // Radiance and Brightness Temperature
 		"sentinel-3-sl-2-lst-ntc", // Land Surface Temperature
 		"sentinel-3-sl-2-wst-ntc", // Water Surface Temperature
 		"sentinel-3-sl-2-frp-ntc", // Fire Radiative Power
 
-		// Sentinel-3 Altimetry (SRAL)
-		"sentinel-3-sr-2-lan-ntc", // Land Altimetry
-		"sentinel-3-sr-2-wat-ntc", // Water Altimetry
+		// Sentinel-3 SYNERGY - NTC only
+		"sentinel-3-syn-2-syn-ntc", // TOA Reflectance
+		"sentinel-3-syn-2-aod-ntc", // Aerosol Optical Depth
+		"sentinel-3-syn-2-vg1-ntc", // 1-Day Surface Reflectance and NDVI
+		"sentinel-3-syn-2-v10-ntc", // 10-Day Surface Reflectance and NDVI
 
-		// Sentinel-6 (Ocean Altimetry)
+		// Sentinel-3 Altimetry (SRAL) - NTC only
+		"sentinel-3-sr-2-lan-ntc", // Land Altimetry
+		"sentinel-3-sr-2-wat-ntc", // Water/Ocean Altimetry
+
+		// Sentinel-6 (Ocean Altimetry) - NTC only
 		"sentinel-6-p4-2-ntc", // Poseidon-4 Level-2
 
-		// Copernicus Contributing Missions (CCM)
-		"ccm-optical", // Pleiades, SPOT, VHR optical imagery
-		"ccm-sar",     // TerraSAR-X, PAZ SAR imagery
+		// NOTE: Sentinel-5P (atmospheric) and CCM collections omitted
+		// - Sentinel-5P has different structure (atmospheric data, not imagery)
+		// - CCM (ccm-optical, ccm-sar, ccm-dem) require special subscription
 	}
+
+	// Step 1: Ensure Provider and Collections exist in the database
+	log.Printf("=== Initializing Provider and Collections ===")
+	db := &order.PostgresDB{}
+	if err := db.Connect(); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	providerID, err := db.EnsureProvider(ProviderName)
+	if err != nil {
+		log.Fatalf("Failed to create/get provider %s: %v", ProviderName, err)
+	}
+	log.Printf("Provider '%s' ready (id=%d)", ProviderName, providerID)
+
+	for _, c := range collections {
+		collectionID, err := db.EnsureCollection(c, providerID)
+		if err != nil {
+			log.Printf("WARNING: Failed to create collection %s: %v", c, err)
+		} else {
+			log.Printf("Collection '%s' ready (id=%d)", c, collectionID)
+		}
+	}
+	db.Close()
+	log.Printf("=== Provider and Collections initialized ===")
+
+	// Step 2: Scan each collection for archive items
 	for _, c := range collections {
 		scanCollection(ProviderName, c)
 	}

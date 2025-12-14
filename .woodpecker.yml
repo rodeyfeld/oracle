@@ -25,7 +25,7 @@ steps:
       - kubectl delete job oracle -n galaxy || true
       # Only works if the manifest is inside THIS repo (oracle), otherwise you might need a different strategy
       # For now, I'll leave the apply commented out unless you copy the job file into this repo
-      # - kubectl apply -f jobs/oracle.yml
+      - kubectl apply -f jobs/oracle.yml
     when:
       - event: [push, manual]
         branch: main
